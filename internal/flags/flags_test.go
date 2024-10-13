@@ -95,7 +95,7 @@ func TestPrintVersion(t *testing.T) {
 		{
 			name:     "Print version",
 			args:     []string{"cmd", "--version"},
-			expected: "cmt 0.1.0\n",
+			expected: "cmt 0.2.0\n",
 		},
 	}
 
