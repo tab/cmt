@@ -1,58 +1,69 @@
 package loader
 
 import (
-	"testing"
-	"time"
+  "sync/atomic"
+  "testing"
+  "time"
 
-	"github.com/stretchr/testify/assert"
+  "github.com/stretchr/testify/assert"
 )
 
-func Test_Start(t *testing.T) {
-	tests := []struct {
-		name     string
-		waitTime time.Duration
-		expect   bool
-	}{
-		{
-			name:     "Running",
-			waitTime: 50 * time.Millisecond,
-			expect:   true,
-		},
-	}
+func TestLoader_Start(t *testing.T) {
+  tests := []struct {
+    name          string
+    waitTime      time.Duration
+    expectRunning bool
+  }{
+    {
+      name:          "Loader starts and runs",
+      waitTime:      200 * time.Millisecond,
+      expectRunning: true,
+    },
+    {
+      name:          "Loader runs for a short time",
+      waitTime:      100 * time.Millisecond,
+      expectRunning: true,
+    },
+  }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			loader := New()
-			loader.Start()
-			defer loader.Stop()
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      l := New()
 
-			time.Sleep(tt.waitTime)
-			assert.Equal(t, tt.expect, loader.running)
-		})
-	}
+      l.Start()
+      time.Sleep(tt.waitTime)
+
+      running := atomic.LoadInt32(&l.running) == 1
+      assert.Equal(t, tt.expectRunning, running)
+
+      l.Stop()
+    })
+  }
 }
 
-func Test_Stop(t *testing.T) {
-	tests := []struct {
-		name     string
-		waitTime time.Duration
-		expect   bool
-	}{
-		{
-			name:     "Stopped",
-			waitTime: 50 * time.Millisecond,
-			expect:   false,
-		},
-	}
+func TestLoader_Stop(t *testing.T) {
+  tests := []struct {
+    name          string
+    waitTime      time.Duration
+    expectRunning bool
+  }{
+    {
+      name:          "Loader stops after start",
+      waitTime:      100 * time.Millisecond,
+      expectRunning: false,
+    },
+  }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			loader := New()
-			loader.Start()
-			loader.Stop()
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      l := New()
 
-			time.Sleep(tt.waitTime)
-			assert.Equal(t, tt.expect, loader.running)
-		})
-	}
+      l.Start()
+      l.Stop()
+      time.Sleep(tt.waitTime)
+
+      running := atomic.LoadInt32(&l.running) == 1
+      assert.Equal(t, tt.expectRunning, running)
+    })
+  }
 }
