@@ -12,6 +12,7 @@ import (
 	"cmt/internal/flags"
 	"cmt/internal/git"
 	"cmt/internal/gpt"
+	"cmt/internal/loader"
 )
 
 func main() {
@@ -36,15 +37,20 @@ func main() {
 	diff, err := g.Diff(ctx)
 	if err != nil {
 		if errors.Is(err, errors.ErrNoGitChanges) {
-			fmt.Println("⚠️ No changes to commit")
+			fmt.Println("\n⚠️ No changes to commit")
 		} else {
-			log.Fatalf("❌ Error getting git diff: %s\n", err)
+			log.Fatalf("\n❌ Error getting git diff: %s\n", err)
 		}
 		return
 	}
 
+	progress := loader.New()
+	progress.Start()
+
 	model := &gpt.GPTModel{}
 	message, err := model.Fetch(ctx, diff)
+	progress.Stop()
+
 	if err != nil {
 		log.Fatalf("⚠️ Error requesting commit message: %s\n", err)
 		return
