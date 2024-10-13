@@ -93,6 +93,31 @@ Type **y** to accept and commit the changes, or **n** to abort.
  ...
 ```
 
+## Configuration
+
+Optional prefix for the commit message can be set with the `--prefix` flag:
+
+```sh
+cmt --prefix "TASK-1234"
+```
+
+or
+
+```sh
+cmt -p "TASK-1234"
+```
+
+Resulting commit message:
+
+```sh
+💬 Message:
+TASK-1234 feat(core): Add user authentication
+
+Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
+
+Accept? (y/n):
+```
+
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.

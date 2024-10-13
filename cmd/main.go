@@ -47,6 +47,10 @@ func main() {
 		return
 	}
 
+	if f.Prefix != "" {
+		message = fmt.Sprintf("%s %s", f.Prefix, message)
+	}
+
 	fmt.Printf("💬 Message: %s", message)
 	fmt.Print("\n\nAccept? (y/n): ")
 

@@ -24,6 +24,7 @@ func TestParse(t *testing.T) {
 			expected: Flags{
 				Version: false,
 				Help:    false,
+				Prefix:  "",
 			},
 		},
 		{
@@ -32,6 +33,7 @@ func TestParse(t *testing.T) {
 			expected: Flags{
 				Version: true,
 				Help:    false,
+				Prefix:  "",
 			},
 		},
 		{
@@ -40,6 +42,16 @@ func TestParse(t *testing.T) {
 			expected: Flags{
 				Version: false,
 				Help:    true,
+				Prefix:  "",
+			},
+		},
+		{
+			name: "Prefix flag",
+			args: []string{"cmd", "-prefix", "TASK-1234"},
+			expected: Flags{
+				Version: false,
+				Help:    false,
+				Prefix:  "TASK-1234",
 			},
 		},
 		{
@@ -48,6 +60,7 @@ func TestParse(t *testing.T) {
 			expected: Flags{
 				Version: true,
 				Help:    true,
+				Prefix:  "",
 			},
 		},
 		{
@@ -56,6 +69,7 @@ func TestParse(t *testing.T) {
 			expected: Flags{
 				Version: false,
 				Help:    false,
+				Prefix:  "",
 			},
 		},
 	}
