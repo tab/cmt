@@ -3,6 +3,7 @@ package flags
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -23,15 +24,13 @@ func Parse() Flags {
 	return f
 }
 
-func (f Flags) PrintVersion() {
-	fmt.Printf("cmt %s\n", VERSION)
+func (f Flags) PrintVersion(w io.Writer) {
+	fmt.Fprintf(w, "cmt %s\n", VERSION)
 }
 
-func (f Flags) PrintHelp() {
-	_, err := fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [options]\n\n", os.Args[0])
-	fmt.Println("These are common cmt commands:")
-	if err != nil {
-		return
-	}
+func (f Flags) PrintHelp(w io.Writer) {
+	fmt.Fprintf(w, "Usage: %s [options]\n\n", os.Args[0])
+	fmt.Fprintln(w, "These are common cmt commands:")
+	flag.CommandLine.SetOutput(w)
 	flag.PrintDefaults()
 }

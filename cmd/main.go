@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -16,10 +17,12 @@ import (
 func main() {
 	f := flags.Parse()
 	if f.Version {
-		f.PrintVersion()
+		f.PrintVersion(os.Stdout)
 		return
-	} else if f.Help {
-		f.PrintHelp()
+	}
+
+	if f.Help {
+		f.PrintHelp(os.Stdout)
 		return
 	}
 

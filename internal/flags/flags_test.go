@@ -55,7 +55,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name: "Both flags",
+			name: "Two flags",
 			args: []string{"cmd", "-version", "-help"},
 			expected: Flags{
 				Version: true,
@@ -82,6 +82,58 @@ func TestParse(t *testing.T) {
 
 			f := Parse()
 			assert.Equal(t, tt.expected, f)
+		})
+	}
+}
+
+func TestPrintVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected string
+	}{
+		{
+			name:     "Print version",
+			args:     []string{"cmd", "--version"},
+			expected: "cmt 0.1.0\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			f := Flags{}
+			f.PrintVersion(&buf)
+
+			result := buf.String()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPrintHelp(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected string
+	}{
+		{
+			name:     "Print help",
+			args:     []string{"cmd", "--help"},
+			expected: "These are common cmt commands:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			f := Flags{}
+			f.PrintHelp(&buf)
+
+			result := buf.String()
+			assert.Contains(t, result, tt.expected)
 		})
 	}
 }
