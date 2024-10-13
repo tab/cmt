@@ -58,7 +58,11 @@ func main() {
 	fmt.Print("\n\nAccept? (y/n): ")
 
 	var response string
-	fmt.Scanln(&response)
+	_, err = fmt.Scanln(&response)
+	if err != nil {
+		log.Fatalf("❌ Error reading response: %s\n", err)
+		return
+	}
 	response = strings.TrimSpace(strings.ToLower(response))
 
 	if response == "y" {
