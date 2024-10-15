@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -8,82 +9,67 @@ import (
 	"strings"
 	"time"
 
-	"cmt/internal/errors"
-	"cmt/internal/flags"
+	"cmt/internal/cli"
+	"cmt/internal/commands"
+	"cmt/internal/commands/changelog"
+	"cmt/internal/commands/commit"
 	"cmt/internal/git"
 	"cmt/internal/gpt"
-	"cmt/internal/loader"
+)
+
+const (
+	Timeout = 60 * time.Second
 )
 
 func main() {
-	f := flags.Parse()
-	if f.Version {
-		f.PrintVersion(os.Stdout)
-		return
-	}
-
-	if f.Help {
-		f.PrintHelp(os.Stdout)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
-	g := &git.Git{
-		Executor: &git.GitExecutor{},
+	client := git.NewGitClient()
+	model := gpt.NewGPTModel()
+	reader := func() (string, error) {
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		return strings.TrimSpace(input), err
+	}
+	options := commands.GenerateOptions{Ctx: ctx, Client: client, Model: model}
+
+	if err := commands.ValidateOptions(options); err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
 
-	diff, err := g.Diff(ctx)
-	if err != nil {
-		if errors.Is(err, errors.ErrNoGitChanges) {
-			fmt.Println("\n⚠️ No changes to commit")
-		} else {
-			log.Fatalf("\n❌ Error getting git diff: %s\n", err)
-		}
-		return
+	if err := run(options, reader, os.Args[1:]); err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
+}
 
-	progress := loader.New()
-	progress.Start()
+func run(options commands.GenerateOptions, reader func() (string, error), args []string) error {
+	var cmd commands.Command
 
-	model := &gpt.GPTModel{}
-	message, err := model.Fetch(ctx, diff)
-	progress.Stop()
-
-	if err != nil {
-		log.Fatalf("⚠️ Error requesting commit message: %s\n", err)
-		return
-	}
-
-	if f.Prefix != "" {
-		message = fmt.Sprintf("%s %s", f.Prefix, message)
-	}
-
-	fmt.Printf("💬 Message: %s", message)
-	fmt.Print("\n\nAccept? (y/n): ")
-
-	var response string
-	_, err = fmt.Scanln(&response)
-	if err != nil {
-		log.Fatalf("❌ Error reading response: %s\n", err)
-		return
-	}
-	response = strings.TrimSpace(strings.ToLower(response))
-
-	if response == "y" {
-		output, err := g.Commit(ctx, message)
-		if err != nil {
-			if errors.Is(err, errors.ErrCommitMessageEmpty) {
-				fmt.Println("⚠️ Commit message is empty, commit aborted")
-			} else {
-				log.Fatalf("❌ Error committing changes: %s\n", err)
-			}
-			return
-		}
-		fmt.Println("🚀 Changes committed:")
-		fmt.Println(output)
+	if len(args) < 1 {
+		cmd = commit.NewCommand(options, reader)
 	} else {
-		fmt.Println("❌ Commit aborted")
+		switch args[0] {
+		case "--prefix", "-p":
+			options.Args = args[1:]
+			cmd = commit.NewCommand(options, reader)
+		case "changelog", "--changelog", "-c":
+			options.Args = args[1:]
+			cmd = changelog.NewCommand(options)
+		case "help", "--help", "-h":
+			cli.Help()
+			return nil
+		case "version", "--version", "-v":
+			cli.Version()
+			return nil
+		default:
+			fmt.Printf("Unknown command: %s\n", args[0])
+			cli.Help()
+			return fmt.Errorf("unknown command: %s", args[0])
+		}
 	}
+
+	return cmd.Generate()
 }
