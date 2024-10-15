@@ -1,9 +1,7 @@
 package commit
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
 
 	"cmt/internal/commands"
@@ -48,21 +46,10 @@ func (c *Command) Generate() error {
 	fmt.Printf("💬 Message: %s", commitMessage)
 	fmt.Print("\n\nAccept? (y/n): ")
 
-	var answer string
-	if c.InputReader != nil {
-		answer, err = c.InputReader()
-		if err != nil {
-			return fmt.Errorf("error reading input: %w", err)
-		}
-	} else {
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("error reading input: %w", err)
-		}
-		answer = strings.TrimSpace(input)
+	answer, err := c.InputReader()
+	if err != nil {
+		return fmt.Errorf("error reading input: %w", err)
 	}
-
 	answer = strings.TrimSpace(strings.ToLower(answer))
 
 	if answer == "y" {
