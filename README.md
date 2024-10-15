@@ -76,8 +76,7 @@ cmt
 Review the generated commit message and choose whether to commit or not.
 
 ```sh
-💬 Message:
-feat(core): Add user authentication
+💬 Message: feat(core): Add user authentication
 
 Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
 
@@ -93,7 +92,7 @@ Type **y** to accept and commit the changes, or **n** to abort.
  ...
 ```
 
-## Configuration
+### Configuration
 
 Optional prefix for the commit message can be set with the `--prefix` flag:
 
@@ -110,12 +109,36 @@ cmt -p "TASK-1234"
 Resulting commit message:
 
 ```sh
-💬 Message:
-TASK-1234 feat(core): Add user authentication
+💬 Message: TASK-1234 feat(core): Add user authentication
 
 Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
 
 Accept? (y/n):
+```
+
+### Changelog generation
+
+Run the `cmt changelog` to generate a changelog based on your commit history:
+
+```sh
+cmt changelog sha1..sha2
+```
+
+```sh
+cmt changelog v1.0.0..v1.1.0
+```
+
+The command will output the changelog in the following format:
+
+```sh
+# CHANGELOG
+
+[1.1.0]
+
+### Features
+
+- **feat(core):** Add user authentication
+...
 ```
 
 ## License
