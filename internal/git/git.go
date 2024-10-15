@@ -14,6 +14,18 @@ type Executor interface {
 	Run(ctx context.Context, name string, arg ...string) *exec.Cmd
 }
 
+type GitClient interface {
+	Diff(ctx context.Context, opts []string) (string, error)
+	Log(ctx context.Context, opts []string) (string, error)
+	Commit(ctx context.Context, message string) (string, error)
+}
+
+func NewGitClient() GitClient {
+	return &Git{
+		Executor: &GitExecutor{},
+	}
+}
+
 type Git struct {
 	Executor Executor
 }
@@ -24,8 +36,16 @@ func (r *GitExecutor) Run(ctx context.Context, name string, arg ...string) *exec
 	return exec.CommandContext(ctx, name, arg...)
 }
 
-func (g *Git) Diff(ctx context.Context) (string, error) {
-	cmd := g.Executor.Run(ctx, "git", "diff", "--staged", "--minimal", "--ignore-all-space", "--ignore-blank-lines")
+func (g *Git) Diff(ctx context.Context, opts []string) (string, error) {
+	args := []string{"diff", "--minimal", "--ignore-all-space", "--ignore-blank-lines"}
+
+	if len(opts) == 0 {
+		args = append(args, "--staged")
+	} else {
+		args = append(args, opts...)
+	}
+
+	cmd := g.Executor.Run(ctx, "git", args...)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -38,6 +58,28 @@ func (g *Git) Diff(ctx context.Context) (string, error) {
 	result := strings.TrimSpace(out.String())
 	if result == "" {
 		return "", errors.ErrNoGitChanges
+	}
+
+	return result, nil
+}
+
+func (g *Git) Log(ctx context.Context, opts []string) (string, error) {
+	args := []string{"log", "--format='%h %s %b'"}
+	args = append(args, opts...)
+
+	cmd := g.Executor.Run(ctx, "git", args...)
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("git log error: %w", err)
+	}
+
+	result := strings.TrimSpace(out.String())
+	if result == "" {
+		return "", errors.ErrNoGitCommits
 	}
 
 	return result, nil
