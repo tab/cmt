@@ -49,7 +49,7 @@ func TestVersion(t *testing.T) {
 	}{
 		{
 			name:   "Version",
-			output: "cmt 0.2.0\n",
+			output: "cmt 0.3.0\n",
 		},
 	}
 

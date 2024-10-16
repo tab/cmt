@@ -28,8 +28,7 @@ func main() {
 	client := git.NewGitClient()
 	model := gpt.NewGPTModel()
 	reader := func() (string, error) {
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
+		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		return strings.TrimSpace(input), err
 	}
 	options := commands.GenerateOptions{Ctx: ctx, Client: client, Model: model}
