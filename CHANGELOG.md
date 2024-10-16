@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [v0.3.0](https://github.com/tab/cmt/releases/tag/v0.3.0)
+
+### Features
+- **feat:** Add codecov configuration file (`codecov.yaml`) for coverage reporting.
+- **feat:** Refactor and enhance command structure for better functionality, including a new command approach and improved error handling.
+- **feat:** Add changelog command.
+
+### Refactor
+- **refactor:** Simplify input reading process in command handling.
+
+### Documentation
+- **docs:** Update README to enhance clarity, add new features, and improve formatting.
+- **docs:** Revise commit message examples for better clarity and add changelog generation instructions.
+
+### Chore
+- **chore:** Add CHANGELOG.md for tracking releases.
+
 ## [v0.2.0](https://github.com/tab/cmt/releases/tag/v0.2.0)
 
 ### Features
