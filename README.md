@@ -1,18 +1,24 @@
 # cmt
 
-**cmt** is a command-line utility that generates Conventional Commit messages using OpenAI's GPT models based on your staged git changes. It automates the process of writing clear and structured commit messages, improving your git workflow.
+**cmt** is a command-line utility that generates [Conventional Commit](https://www.conventionalcommits.org/) messages using OpenAI's GPT models based on staged Git changes.
+
+It automates the process of writing clear and structured commit messages, enhancing your Git workflow and ensuring consistency across projects.
 
 ## Features
 
 - **Automated Commit Messages**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification.
-- **Integration with OpenAI GPT**: Uses GPT to analyze your staged changes and produce meaningful commit messages.
 - **Interactive Approval**: Allows you to review and approve the generated commit message before committing.
+- **Custom Prefixes**: Supports adding custom prefixes to commit messages for better traceability (e.g., task IDs, issue numbers).
+- **Changelog Generation**: Automatically creates changelogs based on your commit history.
+- **Integration with OpenAI GPT**: Utilizes GPT to analyze your staged changes and produce meaningful commit messages.
 
 ## Prerequisites
 
+Before installing and using **cmt**, ensure you have the following:
+
 - **Go**: Version 1.16 or higher is recommended.
-- **Git**: Ensure git is installed and initialized in your project.
-- **OpenAI API Key**: You need an API key from OpenAI to use GPT models.
+- **Git**: Ensure Git is installed and initialized in your project.
+- **OpenAI API Key**: Obtain an API key from [OpenAI](https://platform.openai.com/account/api-keys) to use GPT models.
 
 ## Installation
 
@@ -34,6 +40,8 @@
    ```sh
    export OPENAI_API_KEY=your-api-key-here
    ```
+
+_For permanent setup, add the above line to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.)._
 
 4. **Build the Binary**
 
@@ -100,12 +108,6 @@ Optional prefix for the commit message can be set with the `--prefix` flag:
 cmt --prefix "TASK-1234"
 ```
 
-or
-
-```sh
-cmt -p "TASK-1234"
-```
-
 Resulting commit message:
 
 ```sh
@@ -121,7 +123,7 @@ Accept? (y/n):
 Run the `cmt changelog` to generate a changelog based on your commit history:
 
 ```sh
-cmt changelog sha1..sha2
+cmt changelog SHA1..SHA2
 ```
 
 ```sh
@@ -133,13 +135,39 @@ The command will output the changelog in the following format:
 ```sh
 # CHANGELOG
 
-[1.1.0]
+## [1.1.0]
 
 ### Features
 
-- **feat(core):** Add user authentication
+- **feat(jwt):** Add user authentication
+- **feat(api):** Implement rate limiting for API endpoints
+
+### Bug Fixes
+
+- **fix(auth):** Resolve token expiration issue
+
 ...
 ```
+
+## FAQ
+
+**Q:** How do I obtain an OpenAI API key?
+
+**A:** You can obtain an API key by signing up at [OpenAI's website](https://platform.openai.com/account/api-keys). After signing in, navigate to the API keys section to generate a new key.
+
+---
+
+**Q:** How can I ensure that private information isn't shared with OpenAI?
+
+**A:** Here are some best practices to prevent sharing private information with OpenAI:
+
+1. **Review Staged Changes**: Before running the `cmt` command, carefully review the changes you have staged using `git diff --staged`. Ensure that no sensitive information (like passwords, API keys, or personal data) is included.
+2. **Exclude Sensitive Files**: Use `.gitignore` to exclude files that contain sensitive information from being tracked and staged. For example:
+
+   ```gitignore
+   .env
+   secrets/
+   ```
 
 ## License
 
