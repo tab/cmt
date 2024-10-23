@@ -57,8 +57,8 @@ Follow these guidelines:
 
 Follow the format below:
 {
-  "type": "feat",
-  "scope": "scope of the change",
+  "type": "feat, fix, build, chore, ci, docs, style, refactor, perf, test, revert",
+  "scope": "scope of the change (use one word)",
   "description": "a brief description of what was changed",
   "body": "an optional longer explanation of the change",
   "footer": "any additional information, like breaking changes or issue links"
