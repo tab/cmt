@@ -49,39 +49,43 @@ func (c *Command) Generate() error {
 		commitMessage = fmt.Sprintf("%s %s", c.Options.Args[0], commitMessage)
 	}
 
-	for {
-		fmt.Printf("💬 Message: %s", commitMessage)
-		fmt.Printf("\n\nAccept, edit, or cancel? (%s/%s/%s): ", Accept, Edit, Cancel)
+	fmt.Printf("💬 Message: %s", commitMessage)
+	fmt.Printf("\n\nAccept, edit, or cancel? (%s/%s/%s): ", Accept, Edit, Cancel)
 
-		answer, err := c.InputReader()
-		if err != nil {
-			return fmt.Errorf("error reading input: %w", err)
-		}
-		answer = strings.TrimSpace(strings.ToLower(answer))
+	isAccepted := false
 
-		switch answer {
-		case Accept:
-			output, err := c.Options.Client.Commit(c.Options.Ctx, commitMessage)
-			if err != nil {
-				errors.HandleCommitError(err)
-				return err
-			}
-			fmt.Println("🚀 Changes committed:")
-			fmt.Println(output)
-		case Edit:
-			editedMessage, err := c.Options.Client.Edit(c.Options.Ctx, commitMessage)
-			if err != nil {
-				errors.HandleEditError(err)
-				return err
-			}
-
-			fmt.Println("\n🧑🏻‍💻 Commit message was changed successfully!")
-			commitMessage = editedMessage
-			continue
-		default:
-			fmt.Println("❌ Commit aborted")
-		}
-
-		return nil
+	answer, err := c.InputReader()
+	if err != nil {
+		return fmt.Errorf("error reading input: %w", err)
 	}
+	answer = strings.TrimSpace(strings.ToLower(answer))
+
+	switch answer {
+	case Accept:
+		isAccepted = true
+	case Edit:
+		editedMessage, err := c.Options.Client.Edit(c.Options.Ctx, commitMessage)
+		if err != nil {
+			errors.HandleEditError(err)
+			return err
+		}
+
+		fmt.Println("\n🧑🏻‍💻 Commit message was changed successfully!")
+		commitMessage = editedMessage
+		isAccepted = true
+	default:
+		fmt.Println("❌ Commit aborted")
+	}
+
+	if isAccepted {
+		output, err := c.Options.Client.Commit(c.Options.Ctx, commitMessage)
+		if err != nil {
+			errors.HandleCommitError(err)
+			return err
+		}
+		fmt.Println("🚀 Changes committed:")
+		fmt.Println(output)
+	}
+
+	return nil
 }
