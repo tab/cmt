@@ -3,7 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -17,6 +17,7 @@ type Executor interface {
 type GitClient interface {
 	Diff(ctx context.Context, opts []string) (string, error)
 	Log(ctx context.Context, opts []string) (string, error)
+	Edit(ctx context.Context, message string) (string, error)
 	Commit(ctx context.Context, message string) (string, error)
 }
 
@@ -52,7 +53,7 @@ func (g *Git) Diff(ctx context.Context, opts []string) (string, error) {
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git diff error: %w", err)
+		return "", errors.ErrFailedToLoadGitDiff
 	}
 
 	result := strings.TrimSpace(out.String())
@@ -74,7 +75,7 @@ func (g *Git) Log(ctx context.Context, opts []string) (string, error) {
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git log error: %w", err)
+		return "", errors.ErrFailedToLoadGitLog
 	}
 
 	result := strings.TrimSpace(out.String())
@@ -83,6 +84,42 @@ func (g *Git) Log(ctx context.Context, opts []string) (string, error) {
 	}
 
 	return result, nil
+}
+
+func (g *Git) Edit(ctx context.Context, message string) (string, error) {
+	tmpFile, err := os.CreateTemp("", "editor")
+	if err != nil {
+		return "", errors.ErrFailedToCreateFile
+	}
+	defer os.Remove(tmpFile.Name())
+
+	_, err = tmpFile.WriteString(message)
+	if err != nil {
+		return "", errors.ErrFailedToWriteFile
+	}
+	tmpFile.Close()
+
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vi"
+	}
+
+	cmd := g.Executor.Run(ctx, editor, tmpFile.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", errors.ErrFailedToRunEditor
+	}
+
+	editedMessageBytes, err := os.ReadFile(tmpFile.Name())
+	if err != nil {
+		return "", errors.ErrFailedToReadFile
+	}
+	message = strings.TrimSpace(string(editedMessageBytes))
+
+	return message, nil
 }
 
 func (g *Git) Commit(ctx context.Context, message string) (string, error) {
@@ -97,7 +134,7 @@ func (g *Git) Commit(ctx context.Context, message string) (string, error) {
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git commit error: %w", err)
+		return "", errors.ErrFailedToCommit
 	}
 
 	result := out.String()

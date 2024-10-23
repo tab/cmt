@@ -62,7 +62,7 @@ func Test_GitDiff(t *testing.T) {
 			},
 			expected: result{
 				output: "",
-				err:    errors.New("git diff error: exit status 1"),
+				err:    errors.New("failed to load git diff"),
 			},
 		},
 	}
@@ -134,7 +134,7 @@ func TestGit_Log(t *testing.T) {
 			},
 			expected: result{
 				output: "",
-				err:    errors.New("git log error: exit status 1"),
+				err:    errors.New("failed to load git log"),
 			},
 		},
 	}
@@ -207,7 +207,7 @@ func Test_GitCommit(t *testing.T) {
 			},
 			expected: result{
 				output: "",
-				err:    errors.New("git commit error: exit status 1"),
+				err:    errors.New("failed to commit changes"),
 			},
 		},
 	}
