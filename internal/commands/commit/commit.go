@@ -9,6 +9,12 @@ import (
 	"cmt/internal/utils"
 )
 
+const (
+	Accept = "y"
+	Edit   = "e"
+	Cancel = "n"
+)
+
 type Command struct {
 	Options     commands.GenerateOptions
 	InputReader func() (string, error)
@@ -43,26 +49,39 @@ func (c *Command) Generate() error {
 		commitMessage = fmt.Sprintf("%s %s", c.Options.Args[0], commitMessage)
 	}
 
-	fmt.Printf("💬 Message: %s", commitMessage)
-	fmt.Print("\n\nAccept? (y/n): ")
+	for {
+		fmt.Printf("💬 Message: %s", commitMessage)
+		fmt.Printf("\n\nAccept, edit, or cancel? (%s/%s/%s): ", Accept, Edit, Cancel)
 
-	answer, err := c.InputReader()
-	if err != nil {
-		return fmt.Errorf("error reading input: %w", err)
-	}
-	answer = strings.TrimSpace(strings.ToLower(answer))
-
-	if answer == "y" {
-		output, err := c.Options.Client.Commit(c.Options.Ctx, commitMessage)
+		answer, err := c.InputReader()
 		if err != nil {
-			errors.HandleCommitError(err)
-			return err
+			return fmt.Errorf("error reading input: %w", err)
 		}
-		fmt.Println("🚀 Changes committed:")
-		fmt.Println(output)
-	} else {
-		fmt.Println("❌ Commit aborted")
-	}
+		answer = strings.TrimSpace(strings.ToLower(answer))
 
-	return nil
+		switch answer {
+		case Accept:
+			output, err := c.Options.Client.Commit(c.Options.Ctx, commitMessage)
+			if err != nil {
+				errors.HandleCommitError(err)
+				return err
+			}
+			fmt.Println("🚀 Changes committed:")
+			fmt.Println(output)
+		case Edit:
+			editedMessage, err := c.Options.Client.Edit(c.Options.Ctx, commitMessage)
+			if err != nil {
+				errors.HandleEditError(err)
+				return err
+			}
+
+			fmt.Println("\n🧑🏻‍💻 Commit message was changed successfully!")
+			commitMessage = editedMessage
+			continue
+		default:
+			fmt.Println("❌ Commit aborted")
+		}
+
+		return nil
+	}
 }

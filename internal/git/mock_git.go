@@ -60,6 +60,14 @@ type MockGitClient struct {
 	recorder *MockGitClientMockRecorder
 }
 
+func (m *MockGitClient) Edit(ctx context.Context, message string) (string, error) {
+  m.ctrl.T.Helper()
+  ret := m.ctrl.Call(m, "Edit", ctx, message)
+  ret0, _ := ret[0].(string)
+  ret1, _ := ret[1].(error)
+  return ret0, ret1
+}
+
 // MockGitClientMockRecorder is the mock recorder for MockGitClient.
 type MockGitClientMockRecorder struct {
 	mock *MockGitClient
