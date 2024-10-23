@@ -8,6 +8,7 @@ It automates the process of writing clear and structured commit messages, enhanc
 
 - **Automated Commit Messages**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 - **Interactive Approval**: Allows you to review and approve the generated commit message before committing.
+- **Interactive Edit**: Supports editing the commit message interactively before committing.
 - **Custom Prefixes**: Supports adding custom prefixes to commit messages for better traceability (e.g., task IDs, issue numbers).
 - **Changelog Generation**: Automatically creates changelogs based on your commit history.
 - **Integration with OpenAI GPT**: Utilizes GPT to analyze your staged changes and produce meaningful commit messages.
@@ -88,10 +89,10 @@ Review the generated commit message and choose whether to commit or not.
 
 Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
 
-Accept? (y/n):
+Accept, edit, or cancel? (y/e/n):
 ```
 
-Type **y** to accept and commit the changes, or **n** to abort.
+Type **y** to accept and commit the changes, **e** to edit message or **n** to abort.
 
 ```sh
 🚀 Changes committed:
@@ -115,7 +116,7 @@ Resulting commit message:
 
 Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
 
-Accept? (y/n):
+Accept, edit, or cancel? (y/e/n):
 ```
 
 ### Changelog generation
