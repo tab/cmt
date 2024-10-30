@@ -108,7 +108,7 @@ func Test_FetchCommitMessage(t *testing.T) {
 
 			client := resty.New()
 			client.SetTransport(httpmock.DefaultTransport)
-			client.SetBaseURL(BASE_URL)
+			client.SetBaseURL(BaseURL)
 			client.SetHeader("Authorization", fmt.Sprintf("Bearer %s", args.token))
 			client.SetHeader("Content-Type", "application/json")
 			client.SetRetryCount(3)
@@ -250,7 +250,7 @@ func TestGPTModel_FetchChangelog(t *testing.T) {
 
 			client := resty.New()
 			client.SetTransport(httpmock.DefaultTransport)
-			client.SetBaseURL(BASE_URL)
+			client.SetBaseURL(BaseURL)
 			client.SetHeader("Authorization", fmt.Sprintf("Bearer %s", args.token))
 			client.SetHeader("Content-Type", "application/json")
 			client.SetRetryCount(3)
