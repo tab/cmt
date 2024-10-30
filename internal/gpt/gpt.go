@@ -99,7 +99,7 @@ func parseCommitMessageResponse(text string) (string, error) {
 	}
 
 	if err := json.Unmarshal([]byte(text), &schema); err != nil {
-		return "", fmt.Errorf("Failed to parse JSON: %w", errors.ErrFailedToParseJSON)
+		return "", fmt.Errorf("failed to parse JSON: %w", errors.ErrFailedToParseJSON)
 	}
 
 	scope := ""
