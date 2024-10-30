@@ -60,14 +60,6 @@ type MockGitClient struct {
 	recorder *MockGitClientMockRecorder
 }
 
-func (m *MockGitClient) Edit(ctx context.Context, message string) (string, error) {
-  m.ctrl.T.Helper()
-  ret := m.ctrl.Call(m, "Edit", ctx, message)
-  ret0, _ := ret[0].(string)
-  ret1, _ := ret[1].(error)
-  return ret0, ret1
-}
-
 // MockGitClientMockRecorder is the mock recorder for MockGitClient.
 type MockGitClientMockRecorder struct {
 	mock *MockGitClient
@@ -83,6 +75,21 @@ func NewMockGitClient(ctrl *gomock.Controller) *MockGitClient {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockGitClient) EXPECT() *MockGitClientMockRecorder {
 	return m.recorder
+}
+
+// Edit mocks base method.
+func (m *MockGitClient) Edit(ctx context.Context, message string) (string, error) {
+  m.ctrl.T.Helper()
+  ret := m.ctrl.Call(m, "Edit", ctx, message)
+  ret0, _ := ret[0].(string)
+  ret1, _ := ret[1].(error)
+  return ret0, ret1
+}
+
+// Edit indicates an expected call of Edit.
+func (mr *MockGitClientMockRecorder) Edit(ctx, message interface{}) *gomock.Call {
+  mr.mock.ctrl.T.Helper()
+  return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Edit", reflect.TypeOf((*MockGitClient)(nil).Edit), ctx, message)
 }
 
 // Commit mocks base method.

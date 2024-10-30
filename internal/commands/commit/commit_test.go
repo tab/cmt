@@ -2,7 +2,6 @@ package commit
 
 import (
 	"bytes"
-	"cmt/internal/commands"
 	"context"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"cmt/internal/commands"
 	"cmt/internal/git"
 	"cmt/internal/gpt"
 )
@@ -22,10 +22,9 @@ func Test_Generate(t *testing.T) {
 
 	mockGitClient := git.NewMockGitClient(ctrl)
 	mockGPTModelClient := gpt.NewMockGPTModelClient(ctrl)
-	ctx := context.Background()
 
 	options := commands.GenerateOptions{
-		Ctx:    ctx,
+		Ctx:    context.Background(),
 		Client: mockGitClient,
 		Model:  mockGPTModelClient,
 	}
@@ -47,9 +46,9 @@ func Test_Generate(t *testing.T) {
 				return "y", nil
 			},
 			before: func() {
-				mockGitClient.EXPECT().Diff(ctx, nil).Return("mock diff output", nil)
-				mockGPTModelClient.EXPECT().FetchCommitMessage(ctx, "mock diff output").Return("feat(core): Description", nil)
-				mockGitClient.EXPECT().Commit(ctx, "feat(core): Description").Return("[feature/core 29ca12d] feat(core): Description", nil)
+				mockGitClient.EXPECT().Diff(gomock.Any(), nil).Return("mock diff output", nil)
+				mockGPTModelClient.EXPECT().FetchCommitMessage(gomock.Any(), "mock diff output").Return("feat(core): Description", nil)
+				mockGitClient.EXPECT().Commit(gomock.Any(), "feat(core): Description").Return("[feature/core 29ca12d] feat(core): Description", nil)
 			},
 			expected: result{
 				output: "🚀 Changes committed:\n[feature/core 29ca12d] feat(core): Description",
@@ -62,8 +61,8 @@ func Test_Generate(t *testing.T) {
 				return "n", nil
 			},
 			before: func() {
-				mockGitClient.EXPECT().Diff(ctx, nil).Return("mock diff output", nil)
-				mockGPTModelClient.EXPECT().FetchCommitMessage(ctx, "mock diff output").Return("feat(core): Description", nil)
+				mockGitClient.EXPECT().Diff(gomock.Any(), nil).Return("mock diff output", nil)
+				mockGPTModelClient.EXPECT().FetchCommitMessage(gomock.Any(), "mock diff output").Return("feat(core): Description", nil)
 			},
 			expected: result{
 				output: "❌ Commit aborted",
@@ -76,7 +75,7 @@ func Test_Generate(t *testing.T) {
 				return "", nil
 			},
 			before: func() {
-				mockGitClient.EXPECT().Diff(ctx, nil).Return("", fmt.Errorf("git diff error"))
+				mockGitClient.EXPECT().Diff(gomock.Any(), nil).Return("", fmt.Errorf("git diff error"))
 			},
 			expected: result{
 				output: "❌ Error getting git diff: git diff error",
@@ -89,9 +88,9 @@ func Test_Generate(t *testing.T) {
 				return "y", nil
 			},
 			before: func() {
-				mockGitClient.EXPECT().Diff(ctx, nil).Return("mock diff output", nil)
-				mockGPTModelClient.EXPECT().FetchCommitMessage(ctx, "mock diff output").Return("feat(core): Description", nil)
-				mockGitClient.EXPECT().Commit(ctx, "feat(core): Description").Return("", fmt.Errorf("git commit error"))
+				mockGitClient.EXPECT().Diff(gomock.Any(), nil).Return("mock diff output", nil)
+				mockGPTModelClient.EXPECT().FetchCommitMessage(gomock.Any(), "mock diff output").Return("feat(core): Description", nil)
+				mockGitClient.EXPECT().Commit(gomock.Any(), "feat(core): Description").Return("", fmt.Errorf("git commit error"))
 			},
 			expected: result{
 				output: "❌ Error committing changes: git commit error",

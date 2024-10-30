@@ -3,8 +3,13 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"cmt/internal/errors"
+)
+
+const (
+	Timeout = 60 * time.Second
 )
 
 func GetAPIToken() (string, error) {

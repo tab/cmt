@@ -1,10 +1,12 @@
 package commit
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"cmt/internal/commands"
+	"cmt/internal/config"
 	"cmt/internal/errors"
 	"cmt/internal/utils"
 )
@@ -64,7 +66,7 @@ func (c *Command) Generate() error {
 	case Accept:
 		isAccepted = true
 	case Edit:
-		editedMessage, err := c.Options.Client.Edit(c.Options.Ctx, commitMessage)
+		editedMessage, err := c.Options.Client.Edit(context.Background(), commitMessage)
 		if err != nil {
 			errors.HandleEditError(err)
 			return err
@@ -78,6 +80,10 @@ func (c *Command) Generate() error {
 	}
 
 	if isAccepted {
+		ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
+		c.Options.Ctx = ctx
+		defer cancel()
+
 		output, err := c.Options.Client.Commit(c.Options.Ctx, commitMessage)
 		if err != nil {
 			errors.HandleCommitError(err)
