@@ -1,12 +1,20 @@
 package commit
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"cmt/internal/commands"
+	"cmt/internal/config"
 	"cmt/internal/errors"
 	"cmt/internal/utils"
+)
+
+const (
+	Accept = "y"
+	Edit   = "e"
+	Cancel = "n"
 )
 
 type Command struct {
@@ -44,7 +52,9 @@ func (c *Command) Generate() error {
 	}
 
 	fmt.Printf("💬 Message: %s", commitMessage)
-	fmt.Print("\n\nAccept? (y/n): ")
+	fmt.Printf("\n\nAccept, edit, or cancel? (%s/%s/%s): ", Accept, Edit, Cancel)
+
+	isAccepted := false
 
 	answer, err := c.InputReader()
 	if err != nil {
@@ -52,7 +62,28 @@ func (c *Command) Generate() error {
 	}
 	answer = strings.TrimSpace(strings.ToLower(answer))
 
-	if answer == "y" {
+	switch answer {
+	case Accept:
+		isAccepted = true
+	case Edit:
+		editedMessage, err := c.Options.Client.Edit(context.Background(), commitMessage)
+		if err != nil {
+			errors.HandleEditError(err)
+			return err
+		}
+
+		fmt.Println("\n🧑🏻‍💻 Commit message was changed successfully!")
+		commitMessage = editedMessage
+		isAccepted = true
+	default:
+		fmt.Println("❌ Commit aborted")
+	}
+
+	if isAccepted {
+		ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
+		c.Options.Ctx = ctx
+		defer cancel()
+
 		output, err := c.Options.Client.Commit(c.Options.Ctx, commitMessage)
 		if err != nil {
 			errors.HandleCommitError(err)
@@ -60,8 +91,6 @@ func (c *Command) Generate() error {
 		}
 		fmt.Println("🚀 Changes committed:")
 		fmt.Println(output)
-	} else {
-		fmt.Println("❌ Commit aborted")
 	}
 
 	return nil

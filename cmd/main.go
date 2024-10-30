@@ -7,22 +7,18 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
 
 	"cmt/internal/cli"
 	"cmt/internal/commands"
 	"cmt/internal/commands/changelog"
 	"cmt/internal/commands/commit"
+	"cmt/internal/config"
 	"cmt/internal/git"
 	"cmt/internal/gpt"
 )
 
-const (
-	Timeout = 60 * time.Second
-)
-
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
 
 	client := git.NewGitClient()
