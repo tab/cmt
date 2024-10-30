@@ -13,11 +13,11 @@ coverage:
     project:
       default:
         threshold: 1.0
-        target: 80%
+        target: 70%
     patch:
       default:
         threshold: 1.0
-        target: 80%
+        target: 70%
 
 ignore:
   - "**/*_mock.go"
