@@ -9,7 +9,7 @@ import (
 	"cmt/internal/config"
 )
 
-const BASE_URL = "https://api.openai.com/v1"
+const BaseURL = "https://api.openai.com/v1"
 
 type HTTPClient interface {
 	R() *resty.Request
@@ -26,7 +26,7 @@ func NewClient() (HTTPClient, error) {
 	}
 
 	return resty.New().
-		SetBaseURL(BASE_URL).
+		SetBaseURL(BaseURL).
 		SetHeader("Authorization", fmt.Sprintf("Bearer %s", token)).
 		SetHeader("Content-Type", "application/json").
 		SetRetryCount(3), nil
