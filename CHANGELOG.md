@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [v0.4.0](https://github.com/tab/cmt/releases/tag/v0.4.0)
+
+### Features
+- **feat:** Interactive commit message editing
+
+### Refactor
+- **refactor:** Replace hardcoded timeout with configurable timeout context
+
+### Chore
+- **chore:** Update codecov configuration
+- **chore:** Update Go file formatting rules
+
 ## [v0.3.0](https://github.com/tab/cmt/releases/tag/v0.3.0)
 
 ### Features
