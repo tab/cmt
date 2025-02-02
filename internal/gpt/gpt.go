@@ -15,11 +15,13 @@ const (
 	Temperature = 0.7
 )
 
+// GPTMessage represents a GPT message
 type GPTMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
+// GPTRequest represents a GPT request
 type GPTRequest struct {
 	Model       string       `json:"model"`
 	Messages    []GPTMessage `json:"messages"`
@@ -27,6 +29,7 @@ type GPTRequest struct {
 	Temperature float64      `json:"temperature,omitempty"`
 }
 
+// GPTResponse represents a GPT response
 type GPTResponse struct {
 	Choices []struct {
 		Message struct {
@@ -35,6 +38,7 @@ type GPTResponse struct {
 	} `json:"choices"`
 }
 
+// GPTModelClient represents the GPT model client interface
 type GPTModelClient interface {
 	FetchCommitMessage(ctx context.Context, diff string) (string, error)
 	FetchChangelog(ctx context.Context, commits string) (string, error)
@@ -44,10 +48,12 @@ type GPTModel struct {
 	Client HTTPClient
 }
 
+// NewGPTModel creates a new GPT model instance
 func NewGPTModel() *GPTModel {
 	return &GPTModel{}
 }
 
+// FetchCommitMessage fetches a commit message
 func (g *GPTModel) FetchCommitMessage(ctx context.Context, diff string) (string, error) {
 	const systemPrompt = `You are an experienced Software Engineer tasked with generating a Conventional Commit message based on a provided git diff.
 Follow these guidelines:
@@ -116,6 +122,7 @@ func parseCommitMessageResponse(text string) (string, error) {
 	return message, nil
 }
 
+// FetchChangelog fetches a changelog
 func (g *GPTModel) FetchChangelog(ctx context.Context, commits string) (string, error) {
 	const systemPrompt = `You are an experienced Software Engineer tasked with generating a concise and clear CHANGELOG for a set of commits in Markdown format.
 Follow these instructions:

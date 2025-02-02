@@ -6,17 +6,20 @@ import (
 	"time"
 )
 
+// Loader represents a loader
 type Loader struct {
 	running int32
 	done    chan struct{}
 }
 
+// NewLoader creates a new loader instance
 func NewLoader() *Loader {
 	return &Loader{
 		done: make(chan struct{}),
 	}
 }
 
+// Start starts the loader
 func (l *Loader) Start() {
 	if !atomic.CompareAndSwapInt32(&l.running, 0, 1) {
 		return
@@ -39,6 +42,7 @@ func (l *Loader) Start() {
 	}()
 }
 
+// Stop stops the loader
 func (l *Loader) Stop() {
 	if !atomic.CompareAndSwapInt32(&l.running, 1, 0) {
 		return

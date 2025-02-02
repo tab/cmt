@@ -8,16 +8,19 @@ import (
 	"cmt/internal/utils"
 )
 
+// Command represents the changelog command
 type Command struct {
 	Options commands.GenerateOptions
 }
 
+// NewCommand creates a new command instance
 func NewCommand(options commands.GenerateOptions) *Command {
 	return &Command{
 		Options: options,
 	}
 }
 
+// Generate generates a changelog
 func (c *Command) Generate() error {
 	loader := utils.NewLoader()
 	loader.Start()

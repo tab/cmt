@@ -8,6 +8,7 @@ import (
 	"cmt/internal/gpt"
 )
 
+// GenerateOptions represents the options for the Generate command
 type GenerateOptions struct {
 	Ctx    context.Context
 	Client git.GitClient
@@ -15,10 +16,12 @@ type GenerateOptions struct {
 	Args   []string
 }
 
+// Command represents the command interface
 type Command interface {
 	Generate() error
 }
 
+// ValidateOptions validates the generate command options
 func ValidateOptions(opts GenerateOptions) error {
 	if opts.Ctx == nil {
 		return errors.ErrInvalidContext

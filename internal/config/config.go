@@ -8,10 +8,12 @@ import (
 	"cmt/internal/errors"
 )
 
+// Timeout the default timeout
 const (
 	Timeout = 60 * time.Second
 )
 
+// GetAPIToken returns the OpenAI API token
 func GetAPIToken() (string, error) {
 	token := os.Getenv("OPENAI_API_KEY")
 	if token == "" {

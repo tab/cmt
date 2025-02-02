@@ -17,11 +17,13 @@ const (
 	Cancel = "n"
 )
 
+// Command represents the commit command
 type Command struct {
 	Options     commands.GenerateOptions
 	InputReader func() (string, error)
 }
 
+// NewCommand creates a new command instance
 func NewCommand(options commands.GenerateOptions, inputReader func() (string, error)) *Command {
 	return &Command{
 		Options:     options,
@@ -29,6 +31,7 @@ func NewCommand(options commands.GenerateOptions, inputReader func() (string, er
 	}
 }
 
+// Generate generates a commit message
 func (c *Command) Generate() error {
 	loader := utils.NewLoader()
 	loader.Start()

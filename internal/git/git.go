@@ -10,10 +10,12 @@ import (
 	"cmt/internal/errors"
 )
 
+// Executor the executor interface
 type Executor interface {
 	Run(ctx context.Context, name string, arg ...string) *exec.Cmd
 }
 
+// GitClient the git client interface
 type GitClient interface {
 	Diff(ctx context.Context, opts []string) (string, error)
 	Log(ctx context.Context, opts []string) (string, error)
@@ -21,22 +23,27 @@ type GitClient interface {
 	Commit(ctx context.Context, message string) (string, error)
 }
 
+// NewGitClient creates a new git client instance
 func NewGitClient() GitClient {
 	return &Git{
 		Executor: &GitExecutor{},
 	}
 }
 
+// Git represents the git client
 type Git struct {
 	Executor Executor
 }
 
+// GitExecutor the git executor
 type GitExecutor struct{}
 
+// Run runs a git command
 func (r *GitExecutor) Run(ctx context.Context, name string, arg ...string) *exec.Cmd {
 	return exec.CommandContext(ctx, name, arg...)
 }
 
+// Diff returns the git diff
 func (g *Git) Diff(ctx context.Context, opts []string) (string, error) {
 	args := []string{"diff", "--minimal", "--ignore-all-space", "--ignore-blank-lines"}
 
@@ -64,6 +71,7 @@ func (g *Git) Diff(ctx context.Context, opts []string) (string, error) {
 	return result, nil
 }
 
+// Log returns the git log
 func (g *Git) Log(ctx context.Context, opts []string) (string, error) {
 	args := []string{"log", "--format='%h %s %b'"}
 	args = append(args, opts...)
@@ -86,6 +94,7 @@ func (g *Git) Log(ctx context.Context, opts []string) (string, error) {
 	return result, nil
 }
 
+// Edit edits the commit message
 func (g *Git) Edit(ctx context.Context, message string) (string, error) {
 	tmpFile, err := os.CreateTemp("", "editor")
 	if err != nil {
@@ -122,6 +131,7 @@ func (g *Git) Edit(ctx context.Context, message string) (string, error) {
 	return message, nil
 }
 
+// Commit commits the staged git changes
 func (g *Git) Commit(ctx context.Context, message string) (string, error) {
 	if message == "" {
 		return "", errors.ErrCommitMessageEmpty
