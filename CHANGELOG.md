@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [v0.4.1](https://github.com/tab/cmt/releases/tag/v0.4.1)
+
+### Chore
+- **chore:** Add Makefile to run common Go development tasks
+- **chore:** Add golangci-lint
+- **chore:** Update GitHub Actions workflow
+- **chore:** Bump github.com/stretchr/testify from 1.9.0 to 1.10.0
+- **chore:** Bump github.com/go-resty/resty/v2 from 2.15.3 to 2.16.2
+- **chore:** Bump go.uber.org/mock from 0.4.0 to 0.5.0
+
 ## [v0.4.0](https://github.com/tab/cmt/releases/tag/v0.4.0)
 
 ### Features

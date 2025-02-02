@@ -26,7 +26,7 @@ func TestMainRun(t *testing.T) {
 		{
 			name:   "Version command",
 			args:   []string{"--version"},
-			output: "cmt 0.4.0\n",
+			output: "cmt 0.4.1\n",
 		},
 	}
 
