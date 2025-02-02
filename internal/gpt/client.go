@@ -9,8 +9,10 @@ import (
 	"cmt/internal/config"
 )
 
+// BaseURL the base URL for the OpenAI API
 const BaseURL = "https://api.openai.com/v1"
 
+// HTTPClient represents the HTTP client interface
 type HTTPClient interface {
 	R() *resty.Request
 	SetBaseURL(url string) *resty.Client
@@ -18,6 +20,7 @@ type HTTPClient interface {
 	SetRetryCount(count int) *resty.Client
 }
 
+// NewClient creates a new HTTP client
 func NewClient() (HTTPClient, error) {
 	token, err := config.GetAPIToken()
 	if err != nil {

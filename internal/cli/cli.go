@@ -4,8 +4,10 @@ import (
 	"fmt"
 )
 
+// VERSION is the current cmt version
 const VERSION = "0.4.1"
 
+// Help prints the help message
 func Help() {
 	fmt.Println("Usage:")
 	fmt.Println("  cmt                            Generate a commit message based on staged changes.")
@@ -22,6 +24,7 @@ func Help() {
 	fmt.Println("  cmt changelog 2606b09..HEAD    # From 2606b09 to HEAD")
 }
 
+// Version prints the current version
 func Version() {
 	fmt.Printf("cmt %s\n", VERSION)
 }

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -226,4 +228,32 @@ func Test_GitCommit(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeExecutor struct{}
+
+func (f *fakeExecutor) Run(ctx context.Context, name string, arg ...string) *exec.Cmd {
+	return exec.CommandContext(ctx, name, arg...)
+}
+
+func Test_GitEdit(t *testing.T) {
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "fake_editor.sh")
+	scriptContent := `#!/bin/sh
+echo "edited message" > "$1"
+`
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	assert.NoError(t, err)
+
+	err = os.Setenv("EDITOR", scriptPath)
+	assert.NoError(t, err)
+	defer os.Unsetenv("EDITOR")
+
+	g := &Git{Executor: &fakeExecutor{}}
+
+	ctx := context.Background()
+	originalMessage := "original message"
+	edited, err := g.Edit(ctx, originalMessage)
+	assert.NoError(t, err)
+	assert.Equal(t, "edited message", edited)
 }
