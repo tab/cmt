@@ -19,7 +19,6 @@ import (
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
-	defer cancel()
 
 	client := git.NewGitClient()
 	model := gpt.NewGPTModel()
@@ -31,13 +30,17 @@ func main() {
 
 	if err := commands.ValidateOptions(options); err != nil {
 		log.Println(err)
+		cancel()
 		os.Exit(1)
 	}
 
 	if err := run(options, reader, os.Args[1:]); err != nil {
 		log.Println(err)
+		cancel()
 		os.Exit(1)
 	}
+
+	cancel()
 }
 
 func run(options commands.GenerateOptions, reader func() (string, error), args []string) error {
