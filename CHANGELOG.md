@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [v0.4.2](https://github.com/tab/cmt/releases/tag/v0.4.2)
+
+### Documentation
+- **docs:** Added godoc comments
+
+### Chore
+- **chore:** Bumped dependency github.com/go-resty/resty/v2 from 2.16.2 to 2.16.5
+- **chore:** Updated GitHub workflows for linter, staticcheck, tests, and coverage
+- **chore:** Added staticcheck action to CI workflow
+- **chore:** Added CODEOWNERS files for repository management
+
 ## [v0.4.1](https://github.com/tab/cmt/releases/tag/v0.4.1)
 
 ### Chore

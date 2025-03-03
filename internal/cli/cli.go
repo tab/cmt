@@ -5,7 +5,7 @@ import (
 )
 
 // VERSION is the current cmt version
-const VERSION = "0.4.1"
+const VERSION = "0.4.2"
 
 // Help prints the help message
 func Help() {
