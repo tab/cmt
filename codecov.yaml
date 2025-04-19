@@ -22,3 +22,4 @@ coverage:
 ignore:
   - "**/*_mock.go"
   - "**/*_test.go"
+  - "**/module.go"
