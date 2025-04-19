@@ -19,7 +19,7 @@ const (
 	DefaultLogFormat   = "console"
 	DefaultEditor      = "vim"
 
-	Version = "0.4.2"
+	Version = "0.5.0"
 )
 
 // Config represents the application configuration

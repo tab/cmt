@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [v0.5.0](https://github.com/tab/cmt/releases/tag/v0.5.0)
+
+### Features
+- **feat:** Refactor application architecture with FX framework for dependency injection and lifecycle management
+
+### Chore
+- **chore:** Update dependencies (httpmock from v1.3.1 to v1.4.0, mock from v0.5.0 to v0.5.1)
+- **chore:** Bump goreleaser/goreleaser-action from 6.1.0 to 6.3.0
+
 ## [v0.4.2](https://github.com/tab/cmt/releases/tag/v0.4.2)
 
 ### Documentation
