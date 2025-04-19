@@ -80,7 +80,7 @@ api:
 editor: vim       # Editor to use for interactive editing
 
 model:
-  name: gpt-4o-mini  # OpenAI model to use
+  name: gpt-4.1-nano # OpenAI model to use
   max_tokens: 500    # Maximum tokens for the model response
   temperature: 0.7   # Controls randomness of the model output
 
