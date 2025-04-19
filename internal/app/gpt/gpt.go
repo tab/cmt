@@ -125,7 +125,7 @@ func (g *client) FetchCommitMessage(ctx context.Context, diff string) (string, e
 	g.log.Debug().Msg("Fetching commit message from GPT")
 	content, err := g.fetch(ctx, messages)
 	if err != nil {
-		g.log.Error().Err(err).Msg("Failed to fetch commit message")
+		g.log.Debug().Err(err).Msg("Failed to fetch commit message")
 		return "", err
 	}
 
@@ -180,7 +180,7 @@ func (g *client) fetch(ctx context.Context, messages []Message) (string, error) 
 	}
 
 	if resp.IsError() {
-		g.log.Error().
+		g.log.Debug().
 			Int("status_code", resp.StatusCode()).
 			Str("response", resp.String()).
 			Msg("API returned error")

@@ -11,7 +11,7 @@ import (
 
 const (
 	DefaultTimeout     = 60 * time.Second
-	DefaultModelName   = "gpt-4o-mini"
+	DefaultModelName   = "gpt-4.1-nano"
 	DefaultMaxTokens   = 500
 	DefaultTemperature = 0.7
 	DefaultRetryCount  = 3
