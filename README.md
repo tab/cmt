@@ -68,6 +68,30 @@ _For permanent setup, add the above line to your shell profile (`~/.bashrc`, `~/
     cmt --version
     ```
 
+## Configuration
+
+**cmt** can be configured using a YAML configuration file named `cmt.yaml` placed in the current directory. Below is an example configuration file with the default settings:
+
+```yaml
+api:
+  retry_count: 3  # Number of retry attempts for API requests
+  timeout: 60s    # Timeout duration for API requests
+
+editor: vim       # Editor to use for interactive editing
+
+model:
+  name: gpt-4o-mini  # OpenAI model to use
+  max_tokens: 500    # Maximum tokens for the model response
+  temperature: 0.7   # Controls randomness of the model output
+
+logging:
+  format: console    # Logging format (console or json)
+  level: info        # Logging level (debug, info, warn, error)
+```
+
+You can customize any of these settings to fit your preferences.
+If no configuration file is found, **cmt** will use these default values.
+
 ## Usage
 
 Navigate to your git repository and stage the changes you want to commit:
@@ -101,7 +125,7 @@ Type **y** to accept and commit the changes, **e** to edit message or **n** to a
  ...
 ```
 
-### Configuration
+### Optional Prefix
 
 Optional prefix for the commit message can be set with the `--prefix` flag:
 
