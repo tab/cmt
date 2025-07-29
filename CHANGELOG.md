@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [v0.6.0](https://github.com/tab/cmt/releases/tag/v0.6.0)
+
+### Features
+- **feat:** Use gpt-4.1-nano as default model for faster, cost-effective GPT-4.1
+
+### Chore
+- **chore:** Change GPT API error logging from error to debug mode
+
+### Dependencies
+- **chore(deps):** Bump go.uber.org/fx from 1.23.0 to 1.24.0
+- **chore(deps):** Bump go.uber.org/mock from 0.5.1 to 0.5.2
+- **chore(deps):** Bump codecov/codecov-action from 5.4.2 to 5.4.3
+
+### Documentation
+- **docs:** Add configuration section with example YAML in README
+
 ## [v0.5.0](https://github.com/tab/cmt/releases/tag/v0.5.0)
 
 ### Features
