@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/go-resty/resty/v2 v2.16.5
-	github.com/jarcoal/httpmock v1.4.0
+	github.com/jarcoal/httpmock v1.4.1
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
