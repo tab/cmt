@@ -6,12 +6,14 @@ It automates the process of writing clear and structured commit messages, enhanc
 
 ## Features
 
-- **Automated Commit Messages**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification.
-- **Interactive Approval**: Allows you to review and approve the generated commit message before committing.
-- **Interactive Edit**: Supports editing the commit message interactively before committing.
+- **Automated Commit Messages**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification using GPT.
+- **Interactive TUI**: Modern terminal user interface with split-panel view showing file tree and commit message for review and editing.
+- **Vim-Style Editor**: Built-in modal editor with normal and insert modes for commit message editing.
+- **Deterministic State Controllers**: Each Bubble Tea state is handled by a focused controller, making behaviour predictable and extensible.
 - **Custom Prefixes**: Supports adding custom prefixes to commit messages for better traceability (e.g., task IDs, issue numbers).
-- **Changelog Generation**: Automatically creates changelogs based on your commit history.
-- **Integration with OpenAI GPT**: Utilizes GPT to analyze your staged changes and produce meaningful commit messages.
+- **Changelog Generation**: Automatically creates changelogs based on your commit history and outputs to console.
+- **Live Log Viewing**: Toggle application logs during TUI operation for debugging (press 'l' when logging format is 'ui').
+- **Integration with OpenAI GPT**: Utilizes GPT models to analyze your staged changes and produce meaningful commit messages.
 
 ## Prerequisites
 
@@ -77,15 +79,13 @@ api:
   retry_count: 3  # Number of retry attempts for API requests
   timeout: 60s    # Timeout duration for API requests
 
-editor: vim       # Editor to use for interactive editing
-
 model:
   name: gpt-4.1-nano # OpenAI model to use
   max_tokens: 500    # Maximum tokens for the model response
   temperature: 0.7   # Controls randomness of the model output
 
 logging:
-  format: console    # Logging format (console or json)
+  format: ui         # Logging format (console, json, or ui for log buffer viewing)
   level: info        # Logging level (debug, info, warn, error)
 ```
 
@@ -106,58 +106,60 @@ Run the `cmt` command to generate a commit message:
 cmt
 ```
 
-Review the generated commit message and choose whether to commit or not.
+Review the generated commit message in an interactive split-panel TUI:
 
-```sh
-💬 Message: feat(core): Add user authentication
+- **Left Panel**: File tree showing staged files
+- **Right Panel**: Generated commit message
 
-Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
+**Key Bindings:**
+- `a` - Accept and commit
+- `e` - Edit message (opens vim-style modal editor)
+- `r` - Refresh (regenerate from GPT)
+- `l` - Toggle logs view (when format: ui)
+- `q` - Quit without committing
 
-Accept, edit, or cancel? (y/e/n):
-```
-
-Type **y** to accept and commit the changes, **e** to edit message or **n** to abort.
+If you accept (`a`), the changes will be committed:
 
 ```sh
 🚀 Changes committed:
 [feature/jwt 29ca12d] feat(core): Add user authentication
  2 files changed, 106 insertions(+), 68 deletions(-)
- ...
 ```
 
-### Optional Prefix
+### Custom Prefix
 
-Optional prefix for the commit message can be set with the `--prefix` flag:
+Add a custom prefix to your commit message (e.g., issue tracker ID):
 
 ```sh
-cmt --prefix "TASK-1234"
+cmt --prefix "JIRA-123"
+# or
+cmt prefix "JIRA-123"
+# or
+cmt -p "JIRA-123"
 ```
 
-Resulting commit message:
+The prefix will be prepended to the generated commit message:
 
-```sh
-💬 Message: TASK-1234 feat(core): Add user authentication
-
-Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
-
-Accept, edit, or cancel? (y/e/n):
+```
+JIRA-123 feat(core): Add user authentication
 ```
 
-### Changelog generation
+### Changelog Generation
 
-Run the `cmt changelog` to generate a changelog based on your commit history:
+Generate a changelog from your commit history and output directly to console:
 
 ```sh
-cmt changelog SHA1..SHA2
+cmt changelog                 # From first commit to HEAD
+cmt changelog v1.0.0..v1.1.0  # Between version tags
+cmt changelog SHA1..SHA2      # Between specific commits
+cmt changelog SHA..HEAD       # From commit to HEAD
 ```
 
-```sh
-cmt changelog v1.0.0..v1.1.0
-```
+The changelog is generated using GPT and output in Markdown format:
 
-The command will output the changelog in the following format:
+Example output:
 
-```sh
+```markdown
 # CHANGELOG
 
 ## [1.1.0]
@@ -170,9 +172,15 @@ The command will output the changelog in the following format:
 ### Bug Fixes
 
 - **fix(auth):** Resolve token expiration issue
-
-...
 ```
+
+## Architecture In Brief
+
+- **Dependency Injection**: [`uber-go/fx`](https://github.com/uber-go/fx) wires logging, git access, GPT client, the workflow service, and the Bubble Tea UI. Application construction lives under `internal/app`.
+- **Workflow Service**: `internal/app/cli/workflow` orchestrates “fetch diff → ask GPT → build view data” for both commit and changelog flows. The UI never talks to Git or GPT directly.
+- **State Controllers**: Each Bubble Tea state (fetch, review, edit, changelog, logs) is handled by a dedicated controller in `internal/app/cli/model/state_controller_*.go`. `Model.Update` simply delegates to the controller for the current state, eliminating the previous mega-switch.
+- **Rendering Components**: Reusable view helpers and styling live in `internal/app/cli/components`, keeping Bubble Tea views declarative.
+- **Tests & Tooling**: `make lint` runs `golangci-lint`; `make test` executes the whole suite with coverage reporting enabled.
 
 ## FAQ
 

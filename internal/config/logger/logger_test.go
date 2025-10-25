@@ -129,6 +129,18 @@ func Test_NewLogger(t *testing.T) {
 				format: ConsoleFormat,
 			},
 		},
+		{
+			name: "UI format",
+			cfg: func() *config.Config {
+				cfg := config.DefaultConfig()
+				cfg.Logging.Format = UIFormat
+				return cfg
+			}(),
+			expected: result{
+				level:  zerolog.InfoLevel,
+				format: UIFormat,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -270,4 +282,46 @@ func Test_getLogLevel(t *testing.T) {
 
 func Test_Module(t *testing.T) {
 	assert.NotNil(t, Module)
+}
+
+func Test_AppLogger_GetBuffer(t *testing.T) {
+	tests := []struct {
+		name         string
+		format       string
+		expectBuffer bool
+	}{
+		{
+			name:         "UI format has buffer",
+			format:       UIFormat,
+			expectBuffer: true,
+		},
+		{
+			name:         "Console format has no buffer",
+			format:       ConsoleFormat,
+			expectBuffer: false,
+		},
+		{
+			name:         "JSON format has no buffer",
+			format:       JSONFormat,
+			expectBuffer: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.DefaultConfig()
+			cfg.Logging.Format = tt.format
+
+			logger := NewLogger(cfg)
+			appLogger, ok := logger.(*AppLogger)
+			assert.True(t, ok)
+
+			buffer := appLogger.GetBuffer()
+			if tt.expectBuffer {
+				assert.NotNil(t, buffer)
+			} else {
+				assert.Nil(t, buffer)
+			}
+		})
+	}
 }

@@ -12,14 +12,14 @@ import (
 
 // App represents the main application container
 type App struct {
-	cli cli.CLI
+	ui  cli.UI
 	log logger.Logger
 }
 
 // NewApp creates a new application instance with its dependencies
-func NewApp(cli cli.CLI, log logger.Logger) *App {
+func NewApp(ui cli.UI, log logger.Logger) *App {
 	return &App{
-		cli: cli,
+		ui:  ui,
 		log: log,
 	}
 }
@@ -27,10 +27,18 @@ func NewApp(cli cli.CLI, log logger.Logger) *App {
 // Run executes the application with command line arguments
 func (a *App) Run() {
 	args := os.Args[1:]
-	if err := a.cli.Run(args); err != nil {
+	exitCode := a.execute(args)
+	os.Exit(exitCode)
+}
+
+// execute runs the CLI with given args and handles errors - extracted for testing
+func (a *App) execute(args []string) int {
+	if err := a.ui.Run(args); err != nil {
 		a.log.Error().Err(err).Msg("Application error")
-		os.Exit(1)
+		return 1
 	}
+
+	return 0
 }
 
 // Register registers the application's lifecycle hooks with fx

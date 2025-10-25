@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -17,9 +18,11 @@ const (
 	DefaultRetryCount  = 3
 	DefaultLogLevel    = "info"
 	DefaultLogFormat   = "console"
-	DefaultEditor      = "vim"
 
-	Version = "0.6.0"
+	AppName        = "cmt"
+	AppDescription = "command line utility to generate conversational commits using OpenAI's GPT models"
+
+	Version = "0.7.0"
 )
 
 // Config represents the application configuration
@@ -57,8 +60,6 @@ func DefaultConfig() *Config {
 	cfg.Logging.Level = DefaultLogLevel
 	cfg.Logging.Format = DefaultLogFormat
 
-	cfg.Editor = DefaultEditor
-
 	return cfg
 }
 
@@ -81,12 +82,9 @@ func Load() (*Config, error) {
 		}
 	}
 
-	token, err := GetAPIToken()
-	if err != nil {
+	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
-
-	_ = token
 
 	return cfg, nil
 }
@@ -99,4 +97,21 @@ func GetAPIToken() (string, error) {
 	}
 
 	return token, nil
+}
+
+// validate validates the configuration values
+func (c *Config) validate() error {
+	if c.Model.Temperature < 0 || c.Model.Temperature > 2 {
+		return fmt.Errorf("%w: must be between 0 and 2, got %.2f", errors.ErrInvalidTemperature, c.Model.Temperature)
+	}
+	if c.Model.MaxTokens <= 0 {
+		return fmt.Errorf("%w: must be positive, got %d", errors.ErrInvalidMaxTokens, c.Model.MaxTokens)
+	}
+	if c.API.Timeout <= 0 {
+		return fmt.Errorf("%w: must be positive, got %v", errors.ErrInvalidTimeout, c.API.Timeout)
+	}
+	if c.API.RetryCount < 0 {
+		return fmt.Errorf("%w: must be non-negative, got %d", errors.ErrInvalidRetryCount, c.API.RetryCount)
+	}
+	return nil
 }

@@ -22,6 +22,7 @@ const (
 
 	ConsoleFormat = "console"
 	JSONFormat    = "json"
+	UIFormat      = "ui"
 
 	TimeFormat = "02.01.2006 15:04:05"
 )
@@ -45,7 +46,8 @@ type Event interface {
 
 // AppLogger represents a logger implementation using zerolog
 type AppLogger struct {
-	log zerolog.Logger
+	log    zerolog.Logger
+	buffer *LogBuffer
 }
 
 // NewLogger creates a new logger instance
@@ -55,6 +57,7 @@ func NewLogger(cfg *config.Config) Logger {
 
 	var level zerolog.Level
 	var output io.Writer
+	var buffer *LogBuffer
 
 	if cfg.Logging.Level == "" {
 		cfg.Logging.Level = InfoLevel
@@ -69,6 +72,9 @@ func NewLogger(cfg *config.Config) Logger {
 	switch cfg.Logging.Format {
 	case JSONFormat:
 		output = os.Stdout
+	case UIFormat:
+		output = io.Discard
+		buffer = NewLogBuffer()
 	case ConsoleFormat:
 		output = zerolog.ConsoleWriter{
 			Out:        os.Stdout,
@@ -89,7 +95,11 @@ func NewLogger(cfg *config.Config) Logger {
 		Str("version", config.Version).
 		Logger()
 
-	return &AppLogger{log: logger}
+	if buffer != nil {
+		logger = logger.Hook(NewBufferHook(buffer))
+	}
+
+	return &AppLogger{log: logger, buffer: buffer}
 }
 
 func (l *AppLogger) Debug() *zerolog.Event {
@@ -106,6 +116,11 @@ func (l *AppLogger) Warn() *zerolog.Event {
 
 func (l *AppLogger) Error() *zerolog.Event {
 	return l.log.Error()
+}
+
+// GetBuffer returns the log buffer (nil if not using ui format)
+func (l *AppLogger) GetBuffer() *LogBuffer {
+	return l.buffer
 }
 
 // getLogLevel converts string level to zerolog.Level

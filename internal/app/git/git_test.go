@@ -3,7 +3,6 @@ package git
 import (
 	"bytes"
 	"context"
-	"os"
 	"os/exec"
 	"testing"
 
@@ -97,6 +96,25 @@ func Test_Diff(t *testing.T) {
 				err:    errors.New("failed to load git diff"),
 			},
 		},
+		{
+			name: "No changes to commit",
+			before: func() {
+				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
+				mockExecutor.EXPECT().
+					Run(gomock.Any(), "git", "diff", "--staged", "--minimal", "--ignore-all-space", "--ignore-blank-lines").
+					Return(nil).
+					DoAndReturn(
+						func(ctx context.Context, name string, args ...string) *exec.Cmd {
+							cmd := exec.Command("echo", "")
+							cmd.Stdout = bytes.NewBufferString("")
+							return cmd
+						})
+			},
+			expected: result{
+				output: "",
+				err:    errors.ErrNoGitChanges,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -148,7 +166,7 @@ func Test_Log(t *testing.T) {
 			before: func() {
 				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
 				mockExecutor.EXPECT().
-					Run(gomock.Any(), "git", "log", "--format='%h %s %b'", "v1.0.0..v1.2.0").
+					Run(gomock.Any(), "git", "log", "--format=%h|%s|%an|%ar", "v1.0.0..v1.2.0").
 					Return(nil).
 					DoAndReturn(
 						func(ctx context.Context, name string, args ...string) *exec.Cmd {
@@ -167,7 +185,7 @@ func Test_Log(t *testing.T) {
 			before: func() {
 				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
 				mockExecutor.EXPECT().
-					Run(gomock.Any(), "git", "log", "--format='%h %s %b'", "v1.0.0..v1.2.0").
+					Run(gomock.Any(), "git", "log", "--format=%h|%s|%an|%ar", "v1.0.0..v1.2.0").
 					Return(nil).
 					DoAndReturn(
 						func(ctx context.Context, name string, args ...string) *exec.Cmd {
@@ -178,6 +196,26 @@ func Test_Log(t *testing.T) {
 			expected: result{
 				output: "",
 				err:    errors.New("failed to load git log"),
+			},
+		},
+		{
+			name: "No commits found",
+			before: func() {
+				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
+				mockLogger.EXPECT().Info().Return(mockEvent).AnyTimes()
+				mockExecutor.EXPECT().
+					Run(gomock.Any(), "git", "log", "--format=%h|%s|%an|%ar", "v1.0.0..v1.2.0").
+					Return(nil).
+					DoAndReturn(
+						func(ctx context.Context, name string, args ...string) *exec.Cmd {
+							cmd := exec.Command("echo", "")
+							cmd.Stdout = bytes.NewBufferString("")
+							return cmd
+						})
+			},
+			expected: result{
+				output: "",
+				err:    errors.ErrNoGitCommits,
 			},
 		},
 	}
@@ -199,17 +237,17 @@ func Test_Log(t *testing.T) {
 	}
 }
 
-func Test_Edit(t *testing.T) {
+func Test_Status(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	ctx := context.Background()
+	cfg := config.DefaultConfig()
 
 	mockExecutor := NewMockExecutor(ctrl)
 	mockLogger := logger.NewMockLogger(ctrl)
 	nopLogger := zerolog.Nop()
 	mockEvent := nopLogger.Debug()
-
-	cfg := config.DefaultConfig()
-	cfg.Editor = "test-editor"
 
 	gitClient := &client{
 		cfg:      cfg,
@@ -232,30 +270,26 @@ func Test_Edit(t *testing.T) {
 			before: func() {
 				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
 				mockExecutor.EXPECT().
-					Run(gomock.Any(), "test-editor", gomock.Any()).
+					Run(gomock.Any(), "git", "diff", "--staged", "--name-status").
 					Return(nil).
 					DoAndReturn(
 						func(ctx context.Context, name string, args ...string) *exec.Cmd {
-							err := os.WriteFile(args[0], []byte("edited commit message"), 0644)
-							if err != nil {
-								t.Fatalf("Failed to write to temp file: %v", err)
-							}
-							cmd := exec.Command("echo", "")
+							cmd := exec.Command("echo", "A\tCLAUDE.md")
+							cmd.Stdout = bytes.NewBufferString("A\tCLAUDE.md")
 							return cmd
 						})
 			},
 			expected: result{
-				output: "edited commit message",
+				output: "A\tCLAUDE.md",
 				err:    nil,
 			},
 		},
 		{
-			name: "Failure to run editor",
+			name: "Failure",
 			before: func() {
-				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
 				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
 				mockExecutor.EXPECT().
-					Run(gomock.Any(), "test-editor", gomock.Any()).
+					Run(gomock.Any(), "git", "diff", "--staged", "--name-status").
 					Return(nil).
 					DoAndReturn(
 						func(ctx context.Context, name string, args ...string) *exec.Cmd {
@@ -265,27 +299,26 @@ func Test_Edit(t *testing.T) {
 			},
 			expected: result{
 				output: "",
-				err:    errors.New("error running editor"),
+				err:    errors.New("failed to load git diff"),
 			},
 		},
 		{
-			name: "Failure to read edited file",
+			name: "No changes to commit",
 			before: func() {
 				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
-				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
 				mockExecutor.EXPECT().
-					Run(gomock.Any(), "test-editor", gomock.Any()).
+					Run(gomock.Any(), "git", "diff", "--staged", "--name-status").
 					Return(nil).
 					DoAndReturn(
 						func(ctx context.Context, name string, args ...string) *exec.Cmd {
-							os.Remove(args[0])
 							cmd := exec.Command("echo", "")
+							cmd.Stdout = bytes.NewBufferString("")
 							return cmd
 						})
 			},
 			expected: result{
 				output: "",
-				err:    errors.New("failed to read file"),
+				err:    errors.ErrNoGitChanges,
 			},
 		},
 	}
@@ -294,7 +327,7 @@ func Test_Edit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.before()
 
-			output, err := gitClient.Edit(context.Background(), "original message")
+			output, err := gitClient.Status(ctx)
 
 			if tt.expected.err != nil {
 				assert.Error(t, err)
@@ -331,11 +364,13 @@ func Test_Commit(t *testing.T) {
 
 	tests := []struct {
 		name     string
+		message  string
 		before   func()
 		expected result
 	}{
 		{
-			name: "Success",
+			name:    "Success",
+			message: "test commit",
 			before: func() {
 				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
 				mockLogger.EXPECT().Info().Return(mockEvent).AnyTimes()
@@ -345,7 +380,7 @@ func Test_Commit(t *testing.T) {
 					DoAndReturn(
 						func(ctx context.Context, name string, args ...string) *exec.Cmd {
 							cmd := exec.Command("echo", "commit successful")
-							cmd.Stdout = bytes.NewBufferString("mock commit output")
+							cmd.Stdout = bytes.NewBufferString("commit successful\n")
 							return cmd
 						})
 			},
@@ -355,7 +390,8 @@ func Test_Commit(t *testing.T) {
 			},
 		},
 		{
-			name: "Failure",
+			name:    "Failure",
+			message: "test commit",
 			before: func() {
 				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
 				mockExecutor.EXPECT().
@@ -372,13 +408,24 @@ func Test_Commit(t *testing.T) {
 				err:    errors.New("failed to commit changes"),
 			},
 		},
+		{
+			name:    "Empty commit message",
+			message: "",
+			before: func() {
+				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
+			},
+			expected: result{
+				output: "",
+				err:    errors.ErrCommitMessageEmpty,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.before()
 
-			output, err := gitClient.Commit(context.Background(), "test commit")
+			output, err := gitClient.Commit(context.Background(), tt.message)
 
 			if tt.expected.err != nil {
 				assert.Error(t, err)
