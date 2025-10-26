@@ -2,268 +2,309 @@ package gpt
 
 import (
 	"context"
-	"fmt"
+	"os"
 	"testing"
 
-	"github.com/go-resty/resty/v2"
-	"github.com/jarcoal/httpmock"
 	"github.com/rs/zerolog"
+	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"cmt/internal/app/errors"
 	"cmt/internal/config"
 	"cmt/internal/config/logger"
 )
 
-func Test_FetchCommitMessage(t *testing.T) {
+type stubLogger struct {
+	log zerolog.Logger
+}
+
+func newStubLogger() stubLogger {
+	return stubLogger{
+		log: zerolog.Nop(),
+	}
+}
+
+func (s stubLogger) Debug() *zerolog.Event        { return s.log.Debug() }
+func (s stubLogger) Info() *zerolog.Event         { return s.log.Info() }
+func (s stubLogger) Warn() *zerolog.Event         { return s.log.Warn() }
+func (s stubLogger) Error() *zerolog.Event        { return s.log.Error() }
+func (s stubLogger) GetBuffer() *logger.LogBuffer { return nil }
+
+func Test_Module(t *testing.T) {
+	assert.NotNil(t, Module)
+}
+
+func Test_NewGPTClient(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	cfg := config.DefaultConfig()
-	mockLogger := logger.NewMockLogger(ctrl)
-	nopLogger := zerolog.Nop()
-	mockEvent := nopLogger.Debug()
-
-	httpClient := resty.New()
-	httpClient.SetTransport(httpmock.DefaultTransport)
-	httpClient.SetBaseURL(BaseURL)
-	httpClient.SetHeader("Content-Type", "application/json")
-	httpClient.SetRetryCount(3)
-
-	gptClient := NewGPTClient(cfg, httpClient, mockLogger)
-
-	args := struct {
-		diff  string
-		token string
-	}{
-		diff:  "diff content",
-		token: "test-token",
-	}
-
-	type result struct {
-		content string
-		error   bool
-	}
+	cfg := &config.Config{}
+	cfg.Logging.Level = "error"
+	log := newStubLogger()
 
 	tests := []struct {
-		name     string
-		before   func()
-		expected result
+		name        string
+		token       string
+		expectError bool
 	}{
 		{
-			name: "Success",
-			before: func() {
-				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
-
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `{
-   				"choices": [{
-   					"message": {
-   						"content": "{\"type\": \"feat\", \"scope\": \"core\", \"description\": \"Add new feature\", \"body\": \"Detailed explanation.\"}"
-   					}
-   				}]
-   			}`))
-			},
-			expected: result{
-				content: "feat(core): Add new feature\n\nDetailed explanation.",
-				error:   false,
-			},
+			name:        "missing API token",
+			token:       "",
+			expectError: true,
 		},
 		{
-			name: "API error response",
-			before: func() {
-				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
-
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(500, `{"error": "Internal Server Error"}`))
-			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
-		},
-		{
-			name: "Invalid JSON in response",
-			before: func() {
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `invalid json`))
-			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
-		},
-		{
-			name: "No choices in response",
-			before: func() {
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `{"choices": []}`))
-			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
-		},
-		{
-			name: "Empty message in choices",
-			before: func() {
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `{
-						"choices": [{
-							"message": {}
-						}]
-					}`))
-			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
-		},
-		{
-			name: "Empty content in message",
-			before: func() {
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `{
-						"choices": [{
-							"message": {
-								"content": ""
-							}
-						}]
-					}`))
-			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
+			name:        "valid API token",
+			token:       "valid-token",
+			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.before()
+			oldToken := os.Getenv("OPENAI_API_KEY")
+			defer os.Setenv("OPENAI_API_KEY", oldToken)
 
-			httpClient.SetHeader("Authorization", fmt.Sprintf("Bearer %s", args.token))
-			content, err := gptClient.FetchCommitMessage(context.Background(), args.diff)
+			os.Setenv("OPENAI_API_KEY", tt.token)
 
-			if tt.expected.error {
+			clientInstance, err := NewGPTClient(cfg, log)
+			if tt.expectError {
 				assert.Error(t, err)
+				assert.Nil(t, clientInstance)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expected.content, content)
+				assert.NotNil(t, clientInstance)
+				assert.IsType(t, &client{}, clientInstance)
+			}
+		})
+	}
+}
+
+func Test_FetchCommitMessage(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Model.Name = "gpt-4"
+	cfg.Model.MaxTokens = 500
+	cfg.Model.Temperature = 0.7
+	cfg.API.RetryCount = 0
+	cfg.API.Timeout = 60000000000
+	cfg.Logging.Level = "error"
+	log := newStubLogger()
+
+	tests := []struct {
+		name        string
+		diff        string
+		before      func(*MockAPI)
+		expected    string
+		expectError bool
+		errorType   error
+	}{
+		{
+			name: "successful commit message generation",
+			diff: "diff --git a/file.go",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{
+						Choices: []openai.ChatCompletionChoice{
+							{Message: openai.ChatCompletionMessage{Content: `{"type":"feat","scope":"api","description":"add endpoint","body":""}`}},
+						},
+					},
+					nil,
+				)
+			},
+			expected:    "feat(api): add endpoint",
+			expectError: false,
+		},
+		{
+			name: "API error",
+			diff: "diff --git a/file.go",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{},
+					errors.New("API error"),
+				).AnyTimes()
+			},
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name: "empty response",
+			diff: "diff --git a/file.go",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{Choices: []openai.ChatCompletionChoice{}},
+					nil,
+				)
+			},
+			expected:    "",
+			expectError: true,
+			errorType:   errors.ErrNoResponse,
+		},
+		{
+			name: "empty content in response",
+			diff: "diff --git a/file.go",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{
+						Choices: []openai.ChatCompletionChoice{
+							{Message: openai.ChatCompletionMessage{Content: ""}},
+						},
+					},
+					nil,
+				)
+			},
+			expected:    "",
+			expectError: true,
+			errorType:   errors.ErrNoResponse,
+		},
+		{
+			name: "invalid JSON in response",
+			diff: "diff --git a/file.go",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{
+						Choices: []openai.ChatCompletionChoice{
+							{Message: openai.ChatCompletionMessage{Content: "invalid json"}},
+						},
+					},
+					nil,
+				)
+			},
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := NewMockAPI(ctrl)
+			tt.before(mockAPI)
+
+			c := &client{
+				cfg: cfg,
+				api: mockAPI,
+				log: log,
+			}
+
+			result, err := c.FetchCommitMessage(context.Background(), tt.diff)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorType != nil {
+					assert.ErrorIs(t, err, tt.errorType)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
 			}
 		})
 	}
 }
 
 func Test_FetchChangelog(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	cfg := config.DefaultConfig()
-	mockLogger := logger.NewMockLogger(ctrl)
-	nopLogger := zerolog.Nop()
-	mockEvent := nopLogger.Debug()
-
-	httpClient := resty.New()
-	httpClient.SetTransport(httpmock.DefaultTransport)
-	httpClient.SetBaseURL(BaseURL)
-	httpClient.SetHeader("Content-Type", "application/json")
-	httpClient.SetRetryCount(3)
-
-	gptClient := NewGPTClient(cfg, httpClient, mockLogger)
-
-	args := struct {
-		commits string
-		token   string
-	}{
-		commits: "abcd123 feat(jwt): Add new feature\n\nDetails about the feature",
-		token:   "test-token",
-	}
-
-	type result struct {
-		content string
-		error   bool
-	}
+	cfg := &config.Config{}
+	cfg.Model.Name = "gpt-4"
+	cfg.Model.MaxTokens = 500
+	cfg.Model.Temperature = 0.7
+	cfg.API.RetryCount = 0
+	cfg.API.Timeout = 60000000000
+	cfg.Logging.Level = "error"
+	log := newStubLogger()
 
 	tests := []struct {
-		name     string
-		before   func()
-		expected result
+		name        string
+		commits     string
+		before      func(*MockAPI)
+		expected    string
+		expectError bool
+		errorType   error
 	}{
 		{
-			name: "Success",
-			before: func() {
-				mockLogger.EXPECT().Debug().Return(mockEvent).AnyTimes()
-
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `{
-            "choices": [{
-              "message": {
-                "content": "# CHANGELOG\n\n## Features\n\n- feat(jwt): Add new feature\n\nDetails about the feature"
-              }
-            }]
-          }`))
+			name:    "successful changelog generation",
+			commits: "abc123 feat: add feature\ndef456 fix: fix bug",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{
+						Choices: []openai.ChatCompletionChoice{
+							{Message: openai.ChatCompletionMessage{Content: "# CHANGELOG\n\n## Features\n- add feature"}},
+						},
+					},
+					nil,
+				)
 			},
-			expected: result{
-				content: "# CHANGELOG\n\n## Features\n\n- feat(jwt): Add new feature\n\nDetails about the feature",
-				error:   false,
-			},
+			expected:    "# CHANGELOG\n\n## Features\n- add feature",
+			expectError: false,
 		},
 		{
-			name: "API error response",
-			before: func() {
-				mockLogger.EXPECT().Error().Return(mockEvent).AnyTimes()
-
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(500, `{"error": "Internal Server Error"}`))
+			name:    "API error",
+			commits: "abc123 feat: add feature",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{},
+					errors.New("API error"),
+				).AnyTimes()
 			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
+			expected:    "",
+			expectError: true,
 		},
 		{
-			name: "Invalid JSON in response",
-			before: func() {
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `invalid json`))
+			name:    "empty response",
+			commits: "abc123 feat: add feature",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{Choices: []openai.ChatCompletionChoice{}},
+					nil,
+				)
 			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
+			expected:    "",
+			expectError: true,
+			errorType:   errors.ErrNoResponse,
 		},
 		{
-			name: "No choices in response",
-			before: func() {
-				httpmock.RegisterResponder("POST", "https://api.openai.com/v1/chat/completions",
-					httpmock.NewStringResponder(200, `{"choices": []}`))
+			name:    "empty content in response",
+			commits: "abc123 feat: add feature",
+			before: func(mockAPI *MockAPI) {
+				mockAPI.EXPECT().CreateChatCompletion(gomock.Any(), gomock.Any()).Return(
+					openai.ChatCompletionResponse{
+						Choices: []openai.ChatCompletionChoice{
+							{Message: openai.ChatCompletionMessage{Content: ""}},
+						},
+					},
+					nil,
+				)
 			},
-			expected: result{
-				content: "",
-				error:   true,
-			},
+			expected:    "",
+			expectError: true,
+			errorType:   errors.ErrNoResponse,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.before()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-			httpClient.SetHeader("Authorization", fmt.Sprintf("Bearer %s", args.token))
-			content, err := gptClient.FetchChangelog(context.Background(), args.commits)
+			mockAPI := NewMockAPI(ctrl)
+			tt.before(mockAPI)
 
-			if tt.expected.error {
+			c := &client{
+				cfg: cfg,
+				api: mockAPI,
+				log: log,
+			}
+
+			result, err := c.FetchChangelog(context.Background(), tt.commits)
+
+			if tt.expectError {
 				assert.Error(t, err)
+				if tt.errorType != nil {
+					assert.ErrorIs(t, err, tt.errorType)
+				}
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expected.content, content)
+				assert.Equal(t, tt.expected, result)
 			}
 		})
 	}
@@ -271,52 +312,343 @@ func Test_FetchChangelog(t *testing.T) {
 
 func Test_parseCommitMessageResponse(t *testing.T) {
 	tests := []struct {
-		name     string
-		response string
-		expected string
-		error    bool
+		name        string
+		input       string
+		expected    string
+		expectError bool
 	}{
 		{
-			name:     "Valid JSON string",
-			response: "```json\n{\"type\": \"feat\", \"scope\": \"core\", \"description\": \"Add new feature\", \"body\": \"Detailed explanation\"}\n```",
-			expected: "feat(core): Add new feature\n\nDetailed explanation",
-			error:    false,
+			name:        "simple commit message without scope",
+			input:       `{"type":"feat","scope":"","description":"add new feature","body":""}`,
+			expected:    "feat: add new feature",
+			expectError: false,
 		},
 		{
-			name:     "Valid JSON without code block",
-			response: "{\"type\": \"fix\", \"scope\": \"api\", \"description\": \"Fix bug\", \"body\": \"Bug details\"}",
-			expected: "fix(api): Fix bug\n\nBug details",
-			error:    false,
+			name:        "commit message with scope",
+			input:       `{"type":"fix","scope":"api","description":"fix bug in endpoint","body":""}`,
+			expected:    "fix(api): fix bug in endpoint",
+			expectError: false,
 		},
 		{
-			name:     "Valid JSON with empty scope",
-			response: "{\"type\": \"chore\", \"scope\": \"\", \"description\": \"Update dependencies\", \"body\": \"Updated all dependencies\"}",
-			expected: "chore: Update dependencies\n\nUpdated all dependencies",
-			error:    false,
+			name:        "commit message with body",
+			input:       `{"type":"feat","scope":"ui","description":"add button","body":"This adds a new button to the UI"}`,
+			expected:    "feat(ui): add button\n\nThis adds a new button to the UI",
+			expectError: false,
 		},
 		{
-			name:     "Valid JSON with empty body",
-			response: "{\"type\": \"docs\", \"scope\": \"\", \"description\": \"Update README\", \"body\": \"\"}",
-			expected: "docs: Update README",
+			name:        "commit message wrapped in json code block",
+			input:       "```json\n{\"type\":\"chore\",\"scope\":\"\",\"description\":\"update dependencies\",\"body\":\"\"}\n```",
+			expected:    "chore: update dependencies",
+			expectError: false,
 		},
 		{
-			name:     "Invalid JSON",
-			response: `invalid json`,
-			expected: "",
-			error:    true,
+			name:        "invalid json",
+			input:       `{"type":"feat"`,
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "empty string",
+			input:       "",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "whitespace only",
+			input:       "   \n  \t  ",
+			expected:    "",
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseCommitMessageResponse(tt.response)
+			result, err := parseCommitMessageResponse(tt.input)
 
-			if tt.error {
+			if tt.expectError {
 				assert.Error(t, err)
-				assert.Empty(t, result)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func Test_shouldRetry(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "rate limit error (429) - should retry",
+			err:      &openai.APIError{HTTPStatusCode: 429},
+			expected: true,
+		},
+		{
+			name:     "internal server error (500) - should retry",
+			err:      &openai.APIError{HTTPStatusCode: 500},
+			expected: true,
+		},
+		{
+			name:     "bad gateway (502) - should retry",
+			err:      &openai.APIError{HTTPStatusCode: 502},
+			expected: true,
+		},
+		{
+			name:     "service unavailable (503) - should retry",
+			err:      &openai.APIError{HTTPStatusCode: 503},
+			expected: true,
+		},
+		{
+			name:     "gateway timeout (504) - should retry",
+			err:      &openai.APIError{HTTPStatusCode: 504},
+			expected: true,
+		},
+		{
+			name:     "unauthorized (401) - should not retry",
+			err:      &openai.APIError{HTTPStatusCode: 401},
+			expected: false,
+		},
+		{
+			name:     "forbidden (403) - should not retry",
+			err:      &openai.APIError{HTTPStatusCode: 403},
+			expected: false,
+		},
+		{
+			name:     "bad request (400) - should not retry",
+			err:      &openai.APIError{HTTPStatusCode: 400},
+			expected: false,
+		},
+		{
+			name:     "non-API error - should retry",
+			err:      errors.New("network error"),
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := shouldRetry(tt.err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		schema struct {
+			Type        string `json:"type"`
+			Scope       string `json:"scope"`
+			Description string `json:"description"`
+			Body        string `json:"body"`
+		}
+		expectError bool
+		errorType   error
+	}{
+		{
+			name: "valid schema with all fields",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{
+				Type:        "feat",
+				Scope:       "api",
+				Description: "add endpoint",
+				Body:        "detailed description",
+			},
+			expectError: false,
+		},
+		{
+			name: "valid schema without scope and body",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{
+				Type:        "fix",
+				Scope:       "",
+				Description: "fix bug",
+				Body:        "",
+			},
+			expectError: false,
+		},
+		{
+			name: "missing type",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{
+				Type:        "",
+				Scope:       "api",
+				Description: "add endpoint",
+				Body:        "",
+			},
+			expectError: true,
+			errorType:   errors.ErrMissingCommitType,
+		},
+		{
+			name: "missing description",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{
+				Type:        "feat",
+				Scope:       "api",
+				Description: "",
+				Body:        "",
+			},
+			expectError: true,
+			errorType:   errors.ErrMissingCommitDesc,
+		},
+		{
+			name: "invalid commit type",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{
+				Type:        "invalid",
+				Scope:       "api",
+				Description: "add endpoint",
+				Body:        "",
+			},
+			expectError: true,
+			errorType:   errors.ErrInvalidCommitType,
+		},
+		{
+			name: "all valid commit types - feat",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "feat", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - fix",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "fix", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - build",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "build", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - chore",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "chore", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - ci",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "ci", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - docs",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "docs", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - style",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "style", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - refactor",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "refactor", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - perf",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "perf", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - test",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "test", Description: "test"},
+			expectError: false,
+		},
+		{
+			name: "all valid commit types - revert",
+			schema: struct {
+				Type        string `json:"type"`
+				Scope       string `json:"scope"`
+				Description string `json:"description"`
+				Body        string `json:"body"`
+			}{Type: "revert", Description: "test"},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validate(tt.schema)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorType != nil {
+					assert.ErrorIs(t, err, tt.errorType)
+				}
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

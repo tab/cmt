@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	openai "github.com/sashabaranov/go-openai"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -68,4 +69,43 @@ func (m *MockClient) FetchCommitMessage(ctx context.Context, diff string) (strin
 func (mr *MockClientMockRecorder) FetchCommitMessage(ctx, diff any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchCommitMessage", reflect.TypeOf((*MockClient)(nil).FetchCommitMessage), ctx, diff)
+}
+
+// MockAPI is a mock of API interface.
+type MockAPI struct {
+	ctrl     *gomock.Controller
+	recorder *MockAPIMockRecorder
+	isgomock struct{}
+}
+
+// MockAPIMockRecorder is the mock recorder for MockAPI.
+type MockAPIMockRecorder struct {
+	mock *MockAPI
+}
+
+// NewMockAPI creates a new mock instance.
+func NewMockAPI(ctrl *gomock.Controller) *MockAPI {
+	mock := &MockAPI{ctrl: ctrl}
+	mock.recorder = &MockAPIMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAPI) EXPECT() *MockAPIMockRecorder {
+	return m.recorder
+}
+
+// CreateChatCompletion mocks base method.
+func (m *MockAPI) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (openai.ChatCompletionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateChatCompletion", ctx, request)
+	ret0, _ := ret[0].(openai.ChatCompletionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateChatCompletion indicates an expected call of CreateChatCompletion.
+func (mr *MockAPIMockRecorder) CreateChatCompletion(ctx, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChatCompletion", reflect.TypeOf((*MockAPI)(nil).CreateChatCompletion), ctx, request)
 }
