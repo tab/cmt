@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"io"
 	"os"
 	"time"
 
@@ -20,10 +19,9 @@ const (
 	PanicLevel = "panic"
 	TraceLevel = "trace"
 
-	ConsoleFormat = "console"
-	JSONFormat    = "json"
-
 	TimeFormat = "02.01.2006 15:04:05"
+
+	BufferSize = 1000
 )
 
 // Logger interface for application logging
@@ -32,53 +30,38 @@ type Logger interface {
 	Info() *zerolog.Event
 	Warn() *zerolog.Event
 	Error() *zerolog.Event
-}
-
-type Event interface {
-	Msg(msg string)
-	Msgf(format string, v ...interface{})
-	Str(key, value string) Event
-	Int(key string, value int) Event
-	Dur(key string, value time.Duration) Event
-	Err(err error) Event
+	GetBuffer() *LogBuffer
 }
 
 // AppLogger represents a logger implementation using zerolog
 type AppLogger struct {
-	log zerolog.Logger
+	buffer *LogBuffer
+	log    zerolog.Logger
 }
 
-// NewLogger creates a new logger instance
+// NewLogger creates a new logger instance with buffer (no console output)
 func NewLogger(cfg *config.Config) Logger {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.TimeFieldFormat = time.RFC3339
 
 	var level zerolog.Level
-	var output io.Writer
 
 	if cfg.Logging.Level == "" {
 		cfg.Logging.Level = InfoLevel
 	}
 
-	if cfg.Logging.Format == "" {
-		cfg.Logging.Format = ConsoleFormat
-	}
-
 	level = getLogLevel(cfg.Logging.Level)
 
-	switch cfg.Logging.Format {
-	case JSONFormat:
-		output = os.Stdout
-	case ConsoleFormat:
-		output = zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: TimeFormat,
-		}
-	default:
-		output = zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: TimeFormat,
-		}
+	buffer := NewLogBuffer(BufferSize)
+
+	consoleWriter := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: TimeFormat,
+	}
+
+	output := &bufferedWriter{
+		buffer:        buffer,
+		consoleWriter: consoleWriter,
 	}
 
 	logger := zerolog.
@@ -89,7 +72,15 @@ func NewLogger(cfg *config.Config) Logger {
 		Str("version", config.Version).
 		Logger()
 
-	return &AppLogger{log: logger}
+	return &AppLogger{
+		buffer: buffer,
+		log:    logger,
+	}
+}
+
+// GetBuffer returns the log buffer if available
+func (l *AppLogger) GetBuffer() *LogBuffer {
+	return l.buffer
 }
 
 func (l *AppLogger) Debug() *zerolog.Event {
