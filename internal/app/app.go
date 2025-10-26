@@ -3,45 +3,60 @@ package app
 import (
 	"context"
 	"os"
+	"strings"
 
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 
 	"cmt/internal/app/cli"
+	"cmt/internal/config"
 	"cmt/internal/config/logger"
 )
 
-// App represents the main application container
-type App struct {
-	cli cli.CLI
-	log logger.Logger
-}
-
-// NewApp creates a new application instance with its dependencies
-func NewApp(cli cli.CLI, log logger.Logger) *App {
-	return &App{
-		cli: cli,
-		log: log,
+// Run is the main entry point for the application
+func Run() int {
+	cfg, err := config.Load()
+	if err != nil {
+		return 1
 	}
+
+	ctx := context.Background()
+
+	fxApp, exitCode := createFxApp(ctx, cfg, Module)
+
+	if err := fxApp.Start(ctx); err != nil {
+		return 1
+	}
+
+	if err := fxApp.Stop(ctx); err != nil {
+		return 1
+	}
+
+	return exitCode
 }
 
-// Run executes the application with command line arguments
-func (a *App) Run() {
+// createFxApp creates and configures the FX application
+func createFxApp(ctx context.Context, cfg *config.Config, module fx.Option) (*fx.App, int) {
 	args := os.Args[1:]
-	if err := a.cli.Run(args); err != nil {
-		a.log.Error().Err(err).Msg("Application error")
-		os.Exit(1)
-	}
+
+	var exitCode int
+
+	return fx.New(
+		fx.WithLogger(createFxLogger(cfg)),
+		fx.Supply(cfg, args),
+		module,
+		fx.Invoke(func(cliInstance *cli.CLI) {
+			exitCode = cliInstance.Run(ctx, args)
+		}),
+	), exitCode
 }
 
-// Register registers the application's lifecycle hooks with fx
-func Register(lifecycle fx.Lifecycle, app *App) {
-	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			go app.Run()
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			return nil
-		},
-	})
+// createFxLogger returns an FX logger based on the config
+func createFxLogger(cfg *config.Config) func() fxevent.Logger {
+	return func() fxevent.Logger {
+		if strings.EqualFold(cfg.Logging.Level, logger.DebugLevel) {
+			return &fxevent.ConsoleLogger{W: os.Stdout}
+		}
+		return fxevent.NopLogger
+	}
 }

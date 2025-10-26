@@ -2,13 +2,10 @@ api:
   retry_count: 3
   timeout: 60s
 
-editor: vim
-
 model:
   name: gpt-4.1-nano
   max_tokens: 500
   temperature: 0.7
 
 logging:
-  format: console
   level: info
