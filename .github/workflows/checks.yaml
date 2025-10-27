@@ -15,8 +15,8 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
       - name: golangci-lint
@@ -31,13 +31,13 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
       - name: staticcheck
-        # NOTE: https://github.com/dominikh/staticcheck-action/releases/tag/v1.3.1
-        uses: dominikh/staticcheck-action@fe1dd0c3658873b46f8c9bb3291096a617310ca6
+        # NOTE: https://github.com/dominikh/staticcheck-action/releases/tag/v1.4.0
+        uses: dominikh/staticcheck-action@024238d2898c874f26d723e7d0ff4308c35589a2
         with:
           install-go: false
 
@@ -55,15 +55,15 @@ jobs:
       matrix:
         version: [ '1.24', '1.25' ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.version }}
       - name: Run tests
         run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
       - name: Upload coverage to Codecov
         if: matrix.version == '1.24'
-        # NOTE: https://github.com/codecov/codecov-action/releases/v5.4.3
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24
+        # NOTE: https://github.com/codecov/codecov-action/releases/v5.5.1
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
