@@ -123,10 +123,10 @@ func (g *client) Commit(ctx context.Context, message string) (string, error) {
 	g.log.Debug().Msg("Running git commit command")
 	cmd := g.executor.Run(ctx, "git", "commit", "-m", message)
 
-	var out bytes.Buffer
+	var out, errOut bytes.Buffer
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = io.MultiWriter(&out, os.Stdout)
-	cmd.Stderr = io.MultiWriter(&out, os.Stderr)
+	cmd.Stdout = &out
+	cmd.Stderr = io.MultiWriter(&errOut, os.Stderr)
 
 	if err := cmd.Run(); err != nil {
 		g.log.Error().Err(err).Msg("Failed to execute git commit command")
