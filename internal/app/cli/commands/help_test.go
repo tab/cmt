@@ -14,19 +14,19 @@ func Test_NewHelpCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func Test_helpCmd_Run(t *testing.T) {
+func Test_HelpCmd_Run(t *testing.T) {
 	tests := []struct {
 		name           string
 		args           []string
 		expectedReturn int
 	}{
 		{
-			name:           "run help command with no args",
+			name:           "Success without args",
 			args:           []string{},
 			expectedReturn: 0,
 		},
 		{
-			name:           "run help command with args",
+			name:           "Success with args",
 			args:           []string{"some", "args"},
 			expectedReturn: 0,
 		},
@@ -49,47 +49,47 @@ func Test_GetUsage(t *testing.T) {
 		contains string
 	}{
 		{
-			name:     "contains app name",
+			name:     "Success with app name",
 			contains: config.AppName,
 		},
 		{
-			name:     "contains version",
+			name:     "Success with version",
 			contains: config.Version,
 		},
 		{
-			name:     "contains description",
+			name:     "Success with description",
 			contains: config.AppDescription,
 		},
 		{
-			name:     "contains usage section",
+			name:     "Success with usage section",
 			contains: "Usage:",
 		},
 		{
-			name:     "contains commands section",
+			name:     "Success with commands section",
 			contains: "Commands:",
 		},
 		{
-			name:     "contains examples section",
+			name:     "Success with examples section",
 			contains: "Examples:",
 		},
 		{
-			name:     "contains navigation section",
+			name:     "Success with navigation section",
 			contains: "Navigation:",
 		},
 		{
-			name:     "contains environment section",
+			name:     "Success with environment section",
 			contains: "Environment:",
 		},
 		{
-			name:     "contains changelog command",
+			name:     "Success with changelog command",
 			contains: "changelog",
 		},
 		{
-			name:     "contains version command",
+			name:     "Success with version command",
 			contains: "version",
 		},
 		{
-			name:     "contains help command",
+			name:     "Success with help command",
 			contains: "help",
 		},
 	}

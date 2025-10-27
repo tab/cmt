@@ -12,19 +12,19 @@ func Test_NewVersionCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func Test_versionCmd_Run(t *testing.T) {
+func Test_VersionCmd_Run(t *testing.T) {
 	tests := []struct {
 		name           string
 		args           []string
 		expectedReturn int
 	}{
 		{
-			name:           "run version command with no args",
+			name:           "Success without args",
 			args:           []string{},
 			expectedReturn: 0,
 		},
 		{
-			name:           "run version command with args",
+			name:           "Success with args",
 			args:           []string{"some", "args"},
 			expectedReturn: 0,
 		},

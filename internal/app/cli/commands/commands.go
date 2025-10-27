@@ -20,10 +20,10 @@ type Command interface {
 type CommandsParams struct {
 	fx.In
 
-	GitClient      git.Client
-	GPTClient      gpt.Client
-	Log            logger.Logger
-	SpinnerFactory spinner.Factory
+	GitClient git.Client
+	GPTClient gpt.Client
+	Log       logger.Logger
+	Spinner   spinner.Factory
 }
 
 // commandsResult groups all commands for FX injection
@@ -42,6 +42,6 @@ func provideCommands(p CommandsParams) commandsResult {
 		Help:      NewHelpCommand(),
 		Version:   NewVersionCommand(),
 		Changelog: NewChangelogCommand(p.GitClient, p.GPTClient, p.Log),
-		Commit:    NewCommitCommand(p.GitClient, p.GPTClient, p.Log, p.SpinnerFactory),
+		Commit:    NewCommitCommand(p.GitClient, p.GPTClient, p.Log, p.Spinner),
 	}
 }

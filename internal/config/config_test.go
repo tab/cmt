@@ -2,10 +2,24 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// writeTempConfig creates a temporary directory with a cmt.yaml file
+// containing the specified contents and returns the directory path.
+func writeTempConfig(t *testing.T, contents string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "cmt.yaml")
+	err := os.WriteFile(configPath, []byte(contents), 0644)
+	if err != nil {
+		t.Fatalf("failed to write temp config: %v", err)
+	}
+	return tmpDir
+}
 
 func Test_DefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
@@ -19,10 +33,7 @@ func Test_DefaultConfig(t *testing.T) {
 }
 
 func Test_Load(t *testing.T) {
-	oldToken := os.Getenv("OPENAI_API_KEY")
-	defer os.Setenv("OPENAI_API_KEY", oldToken)
-
-	os.Setenv("OPENAI_API_KEY", "test-token")
+	t.Setenv("OPENAI_API_KEY", "test-token")
 
 	cfg, err := Load()
 
@@ -35,17 +46,15 @@ func Test_Load(t *testing.T) {
 }
 
 func Test_Load_WithInvalidConfig(t *testing.T) {
-	oldToken := os.Getenv("OPENAI_API_KEY")
-	defer os.Setenv("OPENAI_API_KEY", oldToken)
-
-	os.Setenv("OPENAI_API_KEY", "test-token")
+	t.Setenv("OPENAI_API_KEY", "test-token")
 
 	configContent := `model:
   temperature: 3.0`
 
-	err := os.WriteFile("cmt.yaml", []byte(configContent), 0644)
-	assert.NoError(t, err)
-	defer os.Remove("cmt.yaml")
+	tmpDir := writeTempConfig(t, configContent)
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
 
 	cfg, err := Load()
 
@@ -54,17 +63,15 @@ func Test_Load_WithInvalidConfig(t *testing.T) {
 }
 
 func Test_Load_WithBadYAML(t *testing.T) {
-	oldToken := os.Getenv("OPENAI_API_KEY")
-	defer os.Setenv("OPENAI_API_KEY", oldToken)
-
-	os.Setenv("OPENAI_API_KEY", "test-token")
+	t.Setenv("OPENAI_API_KEY", "test-token")
 
 	configContent := `model:
   name: [invalid yaml structure`
 
-	err := os.WriteFile("cmt.yaml", []byte(configContent), 0644)
-	assert.NoError(t, err)
-	defer os.Remove("cmt.yaml")
+	tmpDir := writeTempConfig(t, configContent)
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
 
 	cfg, err := Load()
 
@@ -84,7 +91,7 @@ func Test_GetAPIToken(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  "Error",
+			name:  "Failure with missing token",
 			env:   "",
 			error: true,
 		},
@@ -92,10 +99,7 @@ func Test_GetAPIToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oldEnv := os.Getenv("OPENAI_API_KEY")
-			defer os.Setenv("OPENAI_API_KEY", oldEnv)
-
-			os.Setenv("OPENAI_API_KEY", tt.env)
+			t.Setenv("OPENAI_API_KEY", tt.env)
 
 			token, err := GetAPIToken()
 			if tt.error {
@@ -117,12 +121,12 @@ func Test_Validate(t *testing.T) {
 		errorMsg    string
 	}{
 		{
-			name:        "Valid config",
+			name:        "Success",
 			setupConfig: DefaultConfig,
 			expectError: false,
 		},
 		{
-			name: "Valid config - temperature at lower bound",
+			name: "Success with temperature at lower bound",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.Model.Temperature = 0
@@ -131,7 +135,7 @@ func Test_Validate(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Valid config - temperature at upper bound",
+			name: "Success with temperature at upper bound",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.Model.Temperature = 2
@@ -140,7 +144,7 @@ func Test_Validate(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Valid config - retry count zero",
+			name: "Success with zero retry count",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.API.RetryCount = 0
@@ -149,7 +153,7 @@ func Test_Validate(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Invalid temperature - negative",
+			name: "Failure with negative temperature",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.Model.Temperature = -0.1
@@ -159,7 +163,7 @@ func Test_Validate(t *testing.T) {
 			errorMsg:    "invalid temperature",
 		},
 		{
-			name: "Invalid temperature - too high",
+			name: "Failure with high temperature",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.Model.Temperature = 2.1
@@ -169,7 +173,7 @@ func Test_Validate(t *testing.T) {
 			errorMsg:    "invalid temperature",
 		},
 		{
-			name: "Invalid max_tokens - zero",
+			name: "Failure with zero max tokens",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.Model.MaxTokens = 0
@@ -179,7 +183,7 @@ func Test_Validate(t *testing.T) {
 			errorMsg:    "invalid max_tokens",
 		},
 		{
-			name: "Invalid max_tokens - negative",
+			name: "Failure with negative max tokens",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.Model.MaxTokens = -100
@@ -189,7 +193,7 @@ func Test_Validate(t *testing.T) {
 			errorMsg:    "invalid max_tokens",
 		},
 		{
-			name: "Invalid timeout - zero",
+			name: "Failure with zero timeout",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.API.Timeout = 0
@@ -199,7 +203,7 @@ func Test_Validate(t *testing.T) {
 			errorMsg:    "invalid timeout",
 		},
 		{
-			name: "Invalid timeout - negative",
+			name: "Failure with negative timeout",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.API.Timeout = -1
@@ -209,7 +213,7 @@ func Test_Validate(t *testing.T) {
 			errorMsg:    "invalid timeout",
 		},
 		{
-			name: "Invalid retry_count - negative",
+			name: "Failure with negative retry count",
 			setupConfig: func() *Config {
 				cfg := DefaultConfig()
 				cfg.API.RetryCount = -1

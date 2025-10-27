@@ -38,7 +38,7 @@ func Test_CLI_Run(t *testing.T) {
 		expectedReturn int
 	}{
 		{
-			name: "Successful no-arg command",
+			name: "Success without args",
 			args: []string{},
 			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
 				mockRunner.EXPECT().Resolve([]string{}).Return(mockCmd, []string{}, nil)
@@ -47,7 +47,7 @@ func Test_CLI_Run(t *testing.T) {
 			expectedReturn: 0,
 		},
 		{
-			name: "Successful help command",
+			name: "Success with help command",
 			args: []string{"help"},
 			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
 				mockRunner.EXPECT().Resolve([]string{"help"}).Return(mockCmd, []string{}, nil)
@@ -56,7 +56,7 @@ func Test_CLI_Run(t *testing.T) {
 			expectedReturn: 0,
 		},
 		{
-			name: "Successful version command",
+			name: "Success with version command",
 			args: []string{"version"},
 			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
 				mockRunner.EXPECT().Resolve([]string{"version"}).Return(mockCmd, []string{}, nil)
@@ -65,7 +65,7 @@ func Test_CLI_Run(t *testing.T) {
 			expectedReturn: 0,
 		},
 		{
-			name: "Successful changelog command",
+			name: "Success with changelog command",
 			args: []string{"changelog sha1..sha2"},
 			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
 				mockRunner.EXPECT().Resolve([]string{"changelog sha1..sha2"}).Return(mockCmd, []string{}, nil)
@@ -74,7 +74,7 @@ func Test_CLI_Run(t *testing.T) {
 			expectedReturn: 0,
 		},
 		{
-			name: "Failure help command",
+			name: "Failure with help command error",
 			args: []string{"help"},
 			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
 				mockRunner.EXPECT().Resolve([]string{"help"}).Return(mockCmd, []string{}, nil)
@@ -83,7 +83,7 @@ func Test_CLI_Run(t *testing.T) {
 			expectedReturn: 1,
 		},
 		{
-			name: "Failure unknown command",
+			name: "Failure with unknown command",
 			args: []string{"unknown"},
 			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
 				mockRunner.EXPECT().Resolve([]string{"unknown"}).Return(nil, nil, assert.AnError)

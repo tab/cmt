@@ -78,7 +78,7 @@ func NewModel(input Input) Model {
 	vp.Style = lipgloss.NewStyle()
 	treeVp := viewport.New(0, 0)
 	ta := textarea.New()
-	ta.Placeholder = "Enter commit message..."
+	ta.Placeholder = "Enter commit message…"
 	ta.CharLimit = 0
 
 	s := input.Spinner()

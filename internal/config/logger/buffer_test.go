@@ -13,17 +13,17 @@ func Test_NewLogBuffer(t *testing.T) {
 		expectedMaxSize int
 	}{
 		{
-			name:            "creates buffer with specified size",
+			name:            "Success with specified size",
 			maxSize:         100,
 			expectedMaxSize: 100,
 		},
 		{
-			name:            "creates buffer with default size when maxSize is 0",
+			name:            "Success with zero size",
 			maxSize:         0,
 			expectedMaxSize: 1000,
 		},
 		{
-			name:            "creates buffer with default size when maxSize is negative",
+			name:            "Success with negative size",
 			maxSize:         -5,
 			expectedMaxSize: 1000,
 		},
@@ -48,12 +48,12 @@ func Test_LogBuffer_Add(t *testing.T) {
 		message string
 	}{
 		{
-			name:    "adds info log entry",
+			name:    "Success with info log entry",
 			level:   "info",
 			message: "test message",
 		},
 		{
-			name:    "adds error log entry",
+			name:    "Success with error log entry",
 			level:   "error",
 			message: "error message",
 		},
@@ -81,13 +81,13 @@ func Test_LogBuffer_AddFormatted(t *testing.T) {
 		formattedLine string
 	}{
 		{
-			name:          "adds formatted log entry",
+			name:          "Success with formatted log entry",
 			level:         "debug",
 			message:       "debug message",
 			formattedLine: "[DEBUG] debug message",
 		},
 		{
-			name:          "adds log entry with empty formatted line",
+			name:          "Success with empty formatted line",
 			level:         "warn",
 			message:       "warning message",
 			formattedLine: "",
@@ -117,13 +117,13 @@ func Test_LogBuffer_RingBuffer(t *testing.T) {
 		expectLen int
 	}{
 		{
-			name:      "does not exceed max size",
+			name:      "Success when exceeding max size",
 			maxSize:   3,
 			addCount:  5,
 			expectLen: 3,
 		},
 		{
-			name:      "keeps latest entries when full",
+			name:      "Success when keeping latest entries",
 			maxSize:   2,
 			addCount:  4,
 			expectLen: 2,
@@ -150,11 +150,11 @@ func Test_LogBuffer_Entries(t *testing.T) {
 		addCount int
 	}{
 		{
-			name:     "returns empty slice for empty buffer",
+			name:     "Success with empty buffer",
 			addCount: 0,
 		},
 		{
-			name:     "returns copy of entries",
+			name:     "Success with entries copy",
 			addCount: 3,
 		},
 	}
@@ -188,11 +188,11 @@ func Test_LogBuffer_Clear(t *testing.T) {
 		addCount int
 	}{
 		{
-			name:     "clears buffer with entries",
+			name:     "Success when clearing with entries",
 			addCount: 5,
 		},
 		{
-			name:     "clears empty buffer",
+			name:     "Success when clearing empty buffer",
 			addCount: 0,
 		},
 	}

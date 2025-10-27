@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_parsePrefix(t *testing.T) {
+func Test_ParsePrefix(t *testing.T) {
 	c := &commitCmd{}
 
 	tests := []struct {
@@ -15,72 +15,72 @@ func Test_parsePrefix(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "no prefix argument",
+			name:     "Success without prefix argument",
 			args:     []string{},
 			expected: "",
 		},
 		{
-			name:     "--prefix with space-separated value",
+			name:     "Success with long flag value",
 			args:     []string{"--prefix", "feat:"},
 			expected: "feat:",
 		},
 		{
-			name:     "-p with space-separated value",
+			name:     "Success with short flag value",
 			args:     []string{"-p", "fix:"},
 			expected: "fix:",
 		},
 		{
-			name:     "prefix with space-separated value",
+			name:     "Success with literal command value",
 			args:     []string{"prefix", "chore:"},
 			expected: "chore:",
 		},
 		{
-			name:     "--prefix=value inline format",
+			name:     "Success with inline long flag",
 			args:     []string{"--prefix=docs:"},
 			expected: "docs:",
 		},
 		{
-			name:     "-p=value inline format",
+			name:     "Success with inline short flag",
 			args:     []string{"-p=refactor:"},
 			expected: "refactor:",
 		},
 		{
-			name:     "--PREFIX=value uppercase",
+			name:     "Success with uppercase flag",
 			args:     []string{"--PREFIX=test:"},
 			expected: "test:",
 		},
 		{
-			name:     "prefix with extra whitespace",
+			name:     "Success with whitespace value",
 			args:     []string{"--prefix", "  build:  "},
 			expected: "build:",
 		},
 		{
-			name:     "prefix=value with extra whitespace",
+			name:     "Success with inline whitespace value",
 			args:     []string{"--prefix=  ci:  "},
 			expected: "ci:",
 		},
 		{
-			name:     "prefix among other arguments",
+			name:     "Success with prefix amid args",
 			args:     []string{"some", "args", "--prefix", "perf:", "more", "args"},
 			expected: "perf:",
 		},
 		{
-			name:     "inline prefix among other arguments",
+			name:     "Success with inline prefix amid args",
 			args:     []string{"some", "args", "--prefix=style:", "more", "args"},
 			expected: "style:",
 		},
 		{
-			name:     "prefix without value",
+			name:     "Failure when value missing",
 			args:     []string{"--prefix"},
 			expected: "",
 		},
 		{
-			name:     "prefix with flag as next value (should not use it)",
+			name:     "Failure with following flag",
 			args:     []string{"--prefix", "--some-flag"},
 			expected: "",
 		},
 		{
-			name:     "mixed case prefix",
+			name:     "Success with mixed case flag",
 			args:     []string{"--PrEfIx", "revert:"},
 			expected: "revert:",
 		},

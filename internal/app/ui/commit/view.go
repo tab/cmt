@@ -9,7 +9,7 @@ import (
 // View renders the commit UI
 func (m Model) View() string {
 	if !m.ready {
-		return "Initializing..."
+		return "Initializing…"
 	}
 
 	if m.stateMachine.WorkflowMode() == Editing {
@@ -30,7 +30,7 @@ func (m Model) renderNormalMode() string {
 	}
 
 	if m.stateMachine.IsGenerating() {
-		titleText = m.spinner.View() + " loading..."
+		titleText = m.spinner.View() + " loading…"
 	}
 
 	title := titleStyle.Render(titleText)

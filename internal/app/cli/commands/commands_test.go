@@ -3,27 +3,28 @@ package commands
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+
 	"cmt/internal/app/cli/spinner"
 	"cmt/internal/app/git"
 	"cmt/internal/app/gpt"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
+	"cmt/internal/config/logger"
 )
 
-func Test_provideCommands(t *testing.T) {
+func Test_ProvideCommands(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockGit := git.NewMockClient(ctrl)
 	mockGPT := gpt.NewMockClient(ctrl)
-	log := stubLogger{log: zerolog.Nop()}
+	mockLogger := logger.NewMockLogger(ctrl)
 
 	params := CommandsParams{
-		GitClient:      mockGit,
-		GPTClient:      mockGPT,
-		Log:            log,
-		SpinnerFactory: spinner.NewSpinner,
+		GitClient: mockGit,
+		GPTClient: mockGPT,
+		Log:       mockLogger,
+		Spinner:   spinner.NewSpinner,
 	}
 
 	result := provideCommands(params)

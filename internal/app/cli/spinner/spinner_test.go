@@ -7,6 +7,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// waitForState polls the spinner state until the expected condition is met or timeout occurs.
+func waitForState(s *Spinner, checkFunc func() bool, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		s.mu.RLock()
+		result := checkFunc()
+		s.mu.RUnlock()
+		if result {
+			return true
+		}
+		time.Sleep(time.Millisecond)
+	}
+	return false
+}
+
+// waitForRunning waits for the spinner to reach the expected running state.
+func waitForRunning(s *Spinner, expectedRunning bool) bool {
+	return waitForState(s, func() bool {
+		return s.running == expectedRunning
+	}, 100*time.Millisecond)
+}
+
+// waitForActive waits for the spinner to reach the expected active state.
+func waitForActive(s *Spinner, expectedActive bool) bool {
+	return waitForState(s, func() bool {
+		return s.active == expectedActive
+	}, 100*time.Millisecond)
+}
+
 func Test_Module(t *testing.T) {
 	assert.NotNil(t, Module)
 }
@@ -17,17 +46,18 @@ func Test_New(t *testing.T) {
 		message string
 	}{
 		{
-			name:    "creates spinner with message",
-			message: "Loading...",
+			name:    "Success with message",
+			message: "Loading…",
 		},
 		{
-			name:    "creates spinner with empty message",
+			name:    "Success with empty message",
 			message: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			s := New(tt.message)
 
 			assert.NotNil(t, s)
@@ -45,21 +75,18 @@ func Test_Start(t *testing.T) {
 		name string
 	}{
 		{
-			name: "starts spinner animation",
+			name: "Success",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			s := New("test")
 			s.Start()
 
-			time.Sleep(10 * time.Millisecond)
-
-			s.mu.RLock()
-			assert.True(t, s.running)
-			assert.True(t, s.active)
-			s.mu.RUnlock()
+			assert.True(t, waitForRunning(s, true), "spinner should be running")
+			assert.True(t, waitForActive(s, true), "spinner should be active")
 
 			s.Stop()
 		})
@@ -72,7 +99,7 @@ func Test_Start_Idempotent(t *testing.T) {
 		calls int
 	}{
 		{
-			name:  "multiple start calls do not leak goroutines",
+			name:  "Success with multiple start calls",
 			calls: 10,
 		},
 	}
@@ -83,21 +110,14 @@ func Test_Start_Idempotent(t *testing.T) {
 
 			for i := 0; i < tt.calls; i++ {
 				s.Start()
-				time.Sleep(5 * time.Millisecond)
 			}
 
-			s.mu.RLock()
-			assert.True(t, s.running)
-			s.mu.RUnlock()
+			assert.True(t, waitForRunning(s, true), "spinner should be running after multiple starts")
 
 			s.Stop()
 
-			time.Sleep(10 * time.Millisecond)
-
-			s.mu.RLock()
-			assert.False(t, s.running)
-			assert.False(t, s.active)
-			s.mu.RUnlock()
+			assert.True(t, waitForRunning(s, false), "spinner should stop running")
+			assert.True(t, waitForActive(s, false), "spinner should be inactive")
 		})
 	}
 }
@@ -109,19 +129,20 @@ func Test_SetMessage(t *testing.T) {
 		newMessage string
 	}{
 		{
-			name:       "updates message",
-			initial:    "Loading...",
-			newMessage: "Processing...",
+			name:       "Success with new message",
+			initial:    "Loading…",
+			newMessage: "Processing…",
 		},
 		{
-			name:       "sets empty message",
-			initial:    "Loading...",
+			name:       "Success with empty message",
+			initial:    "Loading…",
 			newMessage: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			s := New(tt.initial)
 			s.SetMessage(tt.newMessage)
 
@@ -137,7 +158,7 @@ func Test_Stop(t *testing.T) {
 		name string
 	}{
 		{
-			name: "stops running spinner",
+			name: "Success",
 		},
 	}
 
@@ -146,16 +167,12 @@ func Test_Stop(t *testing.T) {
 			s := New("test")
 			s.Start()
 
-			time.Sleep(10 * time.Millisecond)
+			assert.True(t, waitForRunning(s, true), "spinner should start running")
 
 			s.Stop()
 
-			time.Sleep(10 * time.Millisecond)
-
-			s.mu.RLock()
-			assert.False(t, s.active)
-			assert.False(t, s.running)
-			s.mu.RUnlock()
+			assert.True(t, waitForActive(s, false), "spinner should be inactive after stop")
+			assert.True(t, waitForRunning(s, false), "spinner should stop running")
 		})
 	}
 }
@@ -175,12 +192,13 @@ func Test_NewSpinner(t *testing.T) {
 		name string
 	}{
 		{
-			name: "creates new bubble tea spinner model",
+			name: "Success",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			model := NewSpinner()
 			assert.NotNil(t, model)
 
@@ -190,17 +208,18 @@ func Test_NewSpinner(t *testing.T) {
 	}
 }
 
-func Test_bubblesSpinner_Update(t *testing.T) {
+func Test_BubblesSpinner_Update(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
 		{
-			name: "updates spinner state",
+			name: "Success",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			model := NewSpinner()
 			assert.NotNil(t, model)
 
@@ -213,17 +232,18 @@ func Test_bubblesSpinner_Update(t *testing.T) {
 	}
 }
 
-func Test_bubblesSpinner_Tick(t *testing.T) {
+func Test_BubblesSpinner_Tick(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
 		{
-			name: "returns tick message",
+			name: "Success",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			model := NewSpinner()
 			assert.NotNil(t, model)
 
