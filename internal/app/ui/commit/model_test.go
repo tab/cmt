@@ -379,67 +379,6 @@ func Test_Update_RegenerateMsg(t *testing.T) {
 	}
 }
 
-func Test_Update_CommitSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockGit := git.NewMockClient(ctrl)
-	mockGPT := gpt.NewMockClient(ctrl)
-	mockSpinner := spinner.NewMockModel(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-
-	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
-
-	input := Input{
-		GitClient: mockGit,
-		GPTClient: mockGPT,
-		Logger:    mockLogger,
-		Ctx:       context.Background(),
-		Spinner:   func() spinner.Model { return mockSpinner },
-	}
-
-	m := NewModel(input)
-	msg := CommitSuccessMsg{Output: "commit output"}
-
-	updated, cmd := m.Update(msg)
-	updatedModel := updated.(Model)
-
-	assert.True(t, updatedModel.state.Accepted)
-	assert.Equal(t, "commit output", updatedModel.state.CommitOutput)
-	assert.NotNil(t, cmd)
-}
-
-func Test_Update_CommitError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockGit := git.NewMockClient(ctrl)
-	mockGPT := gpt.NewMockClient(ctrl)
-	mockSpinner := spinner.NewMockModel(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-
-	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
-
-	input := Input{
-		GitClient: mockGit,
-		GPTClient: mockGPT,
-		Logger:    mockLogger,
-		Ctx:       context.Background(),
-		Spinner:   func() spinner.Model { return mockSpinner },
-	}
-
-	m := NewModel(input)
-	expectedErr := errors.New("commit failed")
-	msg := CommitErrorMsg{Err: expectedErr}
-
-	updated, cmd := m.Update(msg)
-	updatedModel := updated.(Model)
-
-	assert.Equal(t, expectedErr, updatedModel.state.Error)
-	assert.Equal(t, Viewing, updatedModel.stateMachine.WorkflowMode())
-	assert.NotNil(t, cmd)
-}
-
 func Test_HandleNormalMode_Accept(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -451,7 +390,6 @@ func Test_HandleNormalMode_Accept(t *testing.T) {
 	mockLogger := logger.NewMockLogger(ctrl)
 
 	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
-	mockGit.EXPECT().Commit(ctx, "test commit").Return("commit success", nil)
 
 	input := Input{
 		CommitMessage: "test commit",
@@ -467,14 +405,8 @@ func Test_HandleNormalMode_Accept(t *testing.T) {
 	updated, cmd := m.handleNormalMode(keyMsg)
 	updatedModel := updated.(Model)
 
-	assert.Equal(t, Committing, updatedModel.stateMachine.WorkflowMode())
+	assert.True(t, updatedModel.state.Accepted)
 	assert.NotNil(t, cmd)
-
-	// Execute the returned command
-	msg := cmd()
-	successMsg, ok := msg.(CommitSuccessMsg)
-	assert.True(t, ok)
-	assert.Equal(t, "commit success", successMsg.Output)
 }
 
 func Test_HandleNormalMode_Edit(t *testing.T) {
@@ -725,94 +657,6 @@ func Test_HandleEditMode(t *testing.T) {
 	}
 }
 
-func Test_AcceptAndCommit(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	ctx := context.Background()
-	mockLogger := logger.NewMockLogger(ctrl)
-
-	tests := []struct {
-		name        string
-		message     string
-		prefix      string
-		before      func(*git.MockClient)
-		expectError bool
-		checkFn     func(*testing.T, tea.Msg)
-	}{
-		{
-			name:    "Success commit without prefix",
-			message: "test commit",
-			prefix:  "",
-			before: func(mockGit *git.MockClient) {
-				mockGit.EXPECT().Commit(ctx, "test commit").Return("success", nil)
-			},
-			expectError: false,
-			checkFn: func(t *testing.T, msg tea.Msg) {
-				successMsg, ok := msg.(CommitSuccessMsg)
-				assert.True(t, ok)
-				assert.Equal(t, "success", successMsg.Output)
-			},
-		},
-		{
-			name:    "Success commit with prefix",
-			message: "test commit",
-			prefix:  "feat:",
-			before: func(mockGit *git.MockClient) {
-				mockGit.EXPECT().Commit(ctx, "feat: test commit").Return("success", nil)
-			},
-			expectError: false,
-			checkFn: func(t *testing.T, msg tea.Msg) {
-				successMsg, ok := msg.(CommitSuccessMsg)
-				assert.True(t, ok)
-				assert.Equal(t, "success", successMsg.Output)
-			},
-		},
-		{
-			name:    "Failure when commit fails",
-			message: "test commit",
-			prefix:  "",
-			before: func(mockGit *git.MockClient) {
-				mockGit.EXPECT().Commit(ctx, "test commit").Return("", errors.New("commit failed"))
-			},
-			expectError: true,
-			checkFn: func(t *testing.T, msg tea.Msg) {
-				errorMsg, ok := msg.(CommitErrorMsg)
-				assert.True(t, ok)
-				assert.Error(t, errorMsg.Err)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockGit := git.NewMockClient(ctrl)
-			mockGPT := gpt.NewMockClient(ctrl)
-			mockSpinner := spinner.NewMockModel(ctrl)
-
-			mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
-
-			tt.before(mockGit)
-
-			input := Input{
-				CommitMessage: tt.message,
-				Prefix:        tt.prefix,
-				GitClient:     mockGit,
-				GPTClient:     mockGPT,
-				Logger:        mockLogger,
-				Ctx:           ctx,
-				Spinner:       func() spinner.Model { return mockSpinner },
-			}
-
-			m := NewModel(input)
-			cmd := m.acceptAndCommit()
-			msg := cmd()
-
-			tt.checkFn(t, msg)
-		})
-	}
-}
-
 func Test_GetOutput(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -825,28 +669,25 @@ func Test_GetOutput(t *testing.T) {
 	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
 
 	tests := []struct {
-		name            string
-		commitMessage   string
-		prefix          string
-		accepted        bool
-		commitOutput    string
-		expectedMessage string
+		name          string
+		commitMessage string
+		prefix        string
+		accepted      bool
+		result        string
 	}{
 		{
-			name:            "Success without prefix",
-			commitMessage:   "test commit",
-			prefix:          "",
-			accepted:        true,
-			commitOutput:    "commit output",
-			expectedMessage: "test commit",
+			name:          "Success without prefix",
+			commitMessage: "test commit",
+			prefix:        "",
+			accepted:      true,
+			result:        "test commit",
 		},
 		{
-			name:            "Success with prefix",
-			commitMessage:   "test commit",
-			prefix:          "feat:",
-			accepted:        true,
-			commitOutput:    "commit output",
-			expectedMessage: "feat: test commit",
+			name:          "Success with prefix",
+			commitMessage: "test commit",
+			prefix:        "feat:",
+			accepted:      true,
+			result:        "feat: test commit",
 		},
 	}
 
@@ -864,13 +705,11 @@ func Test_GetOutput(t *testing.T) {
 
 			m := NewModel(input)
 			m.state.Accepted = tt.accepted
-			m.state.CommitOutput = tt.commitOutput
 
 			output := m.GetOutput()
 
-			assert.Equal(t, tt.expectedMessage, output.CommitMessage)
+			assert.Equal(t, tt.result, output.Result)
 			assert.Equal(t, tt.accepted, output.Accepted)
-			assert.Equal(t, tt.commitOutput, output.CommitOutput)
 		})
 	}
 }

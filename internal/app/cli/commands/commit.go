@@ -85,10 +85,21 @@ func (c *commitCmd) Run(ctx context.Context, args []string) int {
 		return 0
 	}
 
-	fmt.Println("🚀 Changes committed:")
-	if output.CommitOutput != "" {
-		fmt.Println(output.CommitOutput)
+	c.log.Info().
+		Str("command", "commit").
+		Msg("Executing git commit")
+
+	result, err := c.gitClient.Commit(ctx, output.Result)
+	if err != nil {
+		fmt.Printf("Commit failed: %v\n", err)
+		return 1
 	}
+
+	fmt.Println("🚀 Changes committed:")
+	if result != "" {
+		fmt.Println(result)
+	}
+
 	return 0
 }
 

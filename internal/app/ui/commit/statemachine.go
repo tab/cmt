@@ -34,8 +34,6 @@ const (
 	Fetching
 	// Regenerating indicates a new commit message is being generated
 	Regenerating
-	// Committing indicates the commit is being executed
-	Committing
 )
 
 // String returns the string representation of the WorkflowMode
@@ -49,8 +47,6 @@ func (w WorkflowMode) String() string {
 		return "Fetching"
 	case Regenerating:
 		return "Regenerating"
-	case Committing:
-		return "Committing"
 	default:
 		return "Unknown"
 	}
@@ -119,11 +115,6 @@ func (sm *stateMachine) EnterRegenerating() {
 // EnterFetching enters fetching mode
 func (sm *stateMachine) EnterFetching() {
 	sm.SetWorkflowMode(Fetching)
-}
-
-// EnterCommitting enters committing mode
-func (sm *stateMachine) EnterCommitting() {
-	sm.SetWorkflowMode(Committing)
 }
 
 // IsGenerating returns true if the workflow mode is generating

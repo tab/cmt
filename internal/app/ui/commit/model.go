@@ -62,10 +62,9 @@ type Input struct {
 
 // Output contains the result after the commit UI exits
 type Output struct {
-	Accepted      bool
-	CommitMessage string
-	CommitOutput  string
-	Error         error
+	Accepted bool
+	Result   string
+	Error    error
 }
 
 // NewModel creates a new commit UI model
@@ -215,16 +214,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.stateMachine.EnterViewing(m.stateMachine.ViewPane())
 		}
 		return m, nil
-
-	case CommitSuccessMsg:
-		m.state.Accepted = true
-		m.state.CommitOutput = msg.Output
-		return m, tea.Quit
-
-	case CommitErrorMsg:
-		m.state.Error = msg.Err
-		m.stateMachine.EnterViewing(m.stateMachine.ViewPane())
-		return m, tea.Quit
 	}
 
 	var cmd tea.Cmd
@@ -241,8 +230,8 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keys.Accept):
 		if m.stateMachine.CanAccept() {
-			m.stateMachine.EnterCommitting()
-			return m, m.acceptAndCommit()
+			m.state.Accepted = true
+			return m, tea.Quit
 		}
 		return m, nil
 
@@ -333,23 +322,6 @@ func (m Model) handleEditMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// acceptAndCommit creates a command to commit the current message
-func (m Model) acceptAndCommit() tea.Cmd {
-	return func() tea.Msg {
-		message := m.state.CommitMessage
-		if m.state.Prefix != "" {
-			message = m.state.Prefix + " " + message
-		}
-
-		output, err := m.gitClient.Commit(m.ctx, message)
-		if err != nil {
-			return CommitErrorMsg{Err: err}
-		}
-
-		return CommitSuccessMsg{Output: output}
-	}
-}
-
 // regenerateMessage creates a command to regenerate the commit message
 func (m Model) regenerateMessage() tea.Cmd {
 	return func() tea.Msg {
@@ -366,10 +338,8 @@ func (m Model) GetOutput() Output {
 	}
 
 	return Output{
-		Accepted:      m.state.Accepted,
-		CommitMessage: message,
-		CommitOutput:  m.state.CommitOutput,
-		Error:         m.state.Error,
+		Accepted: m.state.Accepted,
+		Result:   message,
 	}
 }
 

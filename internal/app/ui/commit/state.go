@@ -7,7 +7,6 @@ type State struct {
 	Prefix        string
 	Diff          string
 	Accepted      bool
-	CommitOutput  string
 	Error         error
 }
 

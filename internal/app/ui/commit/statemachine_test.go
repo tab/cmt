@@ -64,11 +64,6 @@ func Test_WorkflowMode_String(t *testing.T) {
 			expected: "Regenerating",
 		},
 		{
-			name:     "Success with committing mode",
-			mode:     Committing,
-			expected: "Committing",
-		},
-		{
 			name:     "Success with unknown mode",
 			mode:     WorkflowMode(999),
 			expected: "Unknown",
@@ -185,13 +180,6 @@ func Test_EnterFetching(t *testing.T) {
 	assert.Equal(t, Fetching, sm.WorkflowMode())
 }
 
-func Test_EnterCommitting(t *testing.T) {
-	sm := newStateMachine(MessagePane, Viewing)
-	sm.EnterCommitting()
-
-	assert.Equal(t, Committing, sm.WorkflowMode())
-}
-
 func Test_IsGenerating(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -216,11 +204,6 @@ func Test_IsGenerating(t *testing.T) {
 		{
 			name:     "Success without generating in editing",
 			mode:     Editing,
-			expected: false,
-		},
-		{
-			name:     "Success without generating in committing",
-			mode:     Committing,
 			expected: false,
 		},
 	}
@@ -328,8 +311,8 @@ func Test_CanAccept(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "Success without accept in committing",
-			mode:     Committing,
+			name:     "Success without accept in editing",
+			mode:     Editing,
 			expected: false,
 		},
 	}

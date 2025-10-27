@@ -17,13 +17,3 @@ type RegenerateMsg struct {
 	Message string
 	Err     error
 }
-
-// CommitSuccessMsg indicates successful commit
-type CommitSuccessMsg struct {
-	Output string
-}
-
-// CommitErrorMsg indicates commit failure
-type CommitErrorMsg struct {
-	Err error
-}

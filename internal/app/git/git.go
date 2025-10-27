@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"strings"
 
@@ -124,8 +125,8 @@ func (g *client) Commit(ctx context.Context, message string) (string, error) {
 
 	var out bytes.Buffer
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = &out
-	cmd.Stderr = &out
+	cmd.Stdout = io.MultiWriter(&out, os.Stdout)
+	cmd.Stderr = io.MultiWriter(&out, os.Stderr)
 
 	if err := cmd.Run(); err != nil {
 		g.log.Error().Err(err).Msg("Failed to execute git commit command")
