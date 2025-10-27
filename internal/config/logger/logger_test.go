@@ -9,10 +9,13 @@ import (
 	"cmt/internal/config"
 )
 
+func Test_Module(t *testing.T) {
+	assert.NotNil(t, Module)
+}
+
 func Test_NewLogger(t *testing.T) {
 	type result struct {
-		level  zerolog.Level
-		format string
+		level zerolog.Level
 	}
 
 	tests := []struct {
@@ -21,112 +24,91 @@ func Test_NewLogger(t *testing.T) {
 		expected result
 	}{
 		{
-			name: "Default",
+			name: "Success with default level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.InfoLevel,
-				format: ConsoleFormat,
+				level: zerolog.InfoLevel,
 			},
 		},
 		{
-			name: "Debug level",
+			name: "Success with empty level",
+			cfg: func() *config.Config {
+				cfg := config.DefaultConfig()
+				cfg.Logging.Level = ""
+				return cfg
+			}(),
+			expected: result{
+				level: zerolog.InfoLevel,
+			},
+		},
+		{
+			name: "Success with debug level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				cfg.Logging.Level = DebugLevel
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.DebugLevel,
-				format: ConsoleFormat,
+				level: zerolog.DebugLevel,
 			},
 		},
 		{
-			name: "Warn level and json format",
+			name: "Success with warn level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				cfg.Logging.Level = WarnLevel
-				cfg.Logging.Format = JSONFormat
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.WarnLevel,
-				format: JSONFormat,
+				level: zerolog.WarnLevel,
 			},
 		},
+
 		{
-			name: "Empty level and format (defaults)",
-			cfg: func() *config.Config {
-				cfg := config.DefaultConfig()
-				cfg.Logging.Level = ""
-				cfg.Logging.Format = ""
-				return cfg
-			}(),
-			expected: result{
-				level:  zerolog.InfoLevel,
-				format: ConsoleFormat,
-			},
-		},
-		{
-			name: "Error level",
+			name: "Success with error level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				cfg.Logging.Level = ErrorLevel
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.ErrorLevel,
-				format: ConsoleFormat,
+				level: zerolog.ErrorLevel,
 			},
 		},
 		{
-			name: "Fatal level",
+			name: "Success with fatal level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				cfg.Logging.Level = FatalLevel
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.FatalLevel,
-				format: ConsoleFormat,
+				level: zerolog.FatalLevel,
 			},
 		},
 		{
-			name: "Panic level",
+			name: "Success with panic level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				cfg.Logging.Level = PanicLevel
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.PanicLevel,
-				format: ConsoleFormat,
+				level: zerolog.PanicLevel,
 			},
 		},
 		{
-			name: "Trace level",
+			name: "Success with trace level",
 			cfg: func() *config.Config {
 				cfg := config.DefaultConfig()
 				cfg.Logging.Level = TraceLevel
 				return cfg
 			}(),
 			expected: result{
-				level:  zerolog.TraceLevel,
-				format: ConsoleFormat,
-			},
-		},
-		{
-			name: "Unknown format (defaults to console)",
-			cfg: func() *config.Config {
-				cfg := config.DefaultConfig()
-				cfg.Logging.Format = "unknown"
-				return cfg
-			}(),
-			expected: result{
-				level:  zerolog.InfoLevel,
-				format: ConsoleFormat,
+				level: zerolog.TraceLevel,
 			},
 		},
 	}
@@ -147,11 +129,9 @@ func Test_NewLogger(t *testing.T) {
 func Test_Logger_Debug(t *testing.T) {
 	cfg := &config.Config{
 		Logging: struct {
-			Level  string `yaml:"level"`
-			Format string `yaml:"format"`
+			Level string `yaml:"level"`
 		}{
-			Level:  DebugLevel,
-			Format: ConsoleFormat,
+			Level: DebugLevel,
 		},
 	}
 
@@ -164,11 +144,9 @@ func Test_Logger_Debug(t *testing.T) {
 func Test_Logger_Info(t *testing.T) {
 	cfg := &config.Config{
 		Logging: struct {
-			Level  string `yaml:"level"`
-			Format string `yaml:"format"`
+			Level string `yaml:"level"`
 		}{
-			Level:  InfoLevel,
-			Format: ConsoleFormat,
+			Level: InfoLevel,
 		},
 	}
 
@@ -181,11 +159,9 @@ func Test_Logger_Info(t *testing.T) {
 func Test_Logger_Warn(t *testing.T) {
 	cfg := &config.Config{
 		Logging: struct {
-			Level  string `yaml:"level"`
-			Format string `yaml:"format"`
+			Level string `yaml:"level"`
 		}{
-			Level:  WarnLevel,
-			Format: ConsoleFormat,
+			Level: WarnLevel,
 		},
 	}
 
@@ -198,11 +174,9 @@ func Test_Logger_Warn(t *testing.T) {
 func Test_Logger_Error(t *testing.T) {
 	cfg := &config.Config{
 		Logging: struct {
-			Level  string `yaml:"level"`
-			Format string `yaml:"format"`
+			Level string `yaml:"level"`
 		}{
-			Level:  ErrorLevel,
-			Format: ConsoleFormat,
+			Level: ErrorLevel,
 		},
 	}
 
@@ -212,49 +186,49 @@ func Test_Logger_Error(t *testing.T) {
 	assert.NotNil(t, logger)
 }
 
-func Test_getLogLevel(t *testing.T) {
+func Test_GetLogLevel(t *testing.T) {
 	tests := []struct {
 		name     string
 		level    string
 		expected zerolog.Level
 	}{
 		{
-			name:     "Debug",
+			name:     "Success with debug level",
 			level:    DebugLevel,
 			expected: zerolog.DebugLevel,
 		},
 		{
-			name:     "Info",
+			name:     "Success with info level",
 			level:    InfoLevel,
 			expected: zerolog.InfoLevel,
 		},
 		{
-			name:     "Warn",
+			name:     "Success with warn level",
 			level:    WarnLevel,
 			expected: zerolog.WarnLevel,
 		},
 		{
-			name:     "Error",
+			name:     "Success with error level",
 			level:    ErrorLevel,
 			expected: zerolog.ErrorLevel,
 		},
 		{
-			name:     "Fatal",
+			name:     "Success with fatal level",
 			level:    FatalLevel,
 			expected: zerolog.FatalLevel,
 		},
 		{
-			name:     "Panic",
+			name:     "Success with panic level",
 			level:    PanicLevel,
 			expected: zerolog.PanicLevel,
 		},
 		{
-			name:     "Trace",
+			name:     "Success with trace level",
 			level:    TraceLevel,
 			expected: zerolog.TraceLevel,
 		},
 		{
-			name:     "Unknown",
+			name:     "Success with unknown level",
 			level:    "unknown",
 			expected: zerolog.InfoLevel,
 		},
@@ -268,6 +242,53 @@ func Test_getLogLevel(t *testing.T) {
 	}
 }
 
-func Test_Module(t *testing.T) {
-	assert.NotNil(t, Module)
+func Test_NewLogger_WithBuffer(t *testing.T) {
+	cfg := &config.Config{
+		Logging: struct {
+			Level string `yaml:"level"`
+		}{
+			Level: InfoLevel,
+		},
+	}
+
+	logger := NewLogger(cfg)
+
+	assert.NotNil(t, logger)
+	assert.NotNil(t, logger.GetBuffer())
+
+	logger.Info().Int("diff_size", 8740).Str("version", "0.7.0").Msg("Generating commit message")
+
+	buffer := logger.GetBuffer()
+	entries := buffer.Entries()
+	assert.Equal(t, 1, len(entries))
+	assert.Equal(t, "info", entries[0].Level)
+	assert.Contains(t, entries[0].Message, "Generating commit message")
+	assert.Contains(t, entries[0].Message, "diff_size=8740")
+	assert.Contains(t, entries[0].Message, "version=0.7.0")
+}
+
+func Test_LogBuffer(t *testing.T) {
+	buffer := NewLogBuffer(3)
+
+	buffer.Add("info", "message 1")
+	buffer.Add("debug", "message 2")
+	buffer.Add("error", "message 3")
+
+	entries := buffer.Entries()
+	assert.Equal(t, 3, len(entries))
+	assert.Equal(t, "info", entries[0].Level)
+	assert.Equal(t, "message 1", entries[0].Message)
+
+	buffer.Add("warn", "message 4")
+
+	entries = buffer.Entries()
+	assert.Equal(t, 3, len(entries))
+	assert.Equal(t, "debug", entries[0].Level)
+	assert.Equal(t, "message 2", entries[0].Message)
+	assert.Equal(t, "warn", entries[2].Level)
+	assert.Equal(t, "message 4", entries[2].Message)
+
+	buffer.Clear()
+	entries = buffer.Entries()
+	assert.Equal(t, 0, len(entries))
 }

@@ -48,11 +48,12 @@ jobs:
       pull-requests: write
     env:
       GO_ENV: test
+      OPENAI_API_KEY: api-key
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        version: [ '1.23', '1.24' ]
+        version: [ '1.24', '1.25' ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

@@ -10,6 +10,13 @@ var (
 
 	ErrFailedToReadConfig  = errors.New("failed to read config file")
 	ErrFailedToParseConfig = errors.New("failed to parse config file")
+	ErrInvalidTemperature  = errors.New("invalid temperature")
+	ErrInvalidMaxTokens    = errors.New("invalid max_tokens")
+	ErrInvalidTimeout      = errors.New("invalid timeout")
+	ErrInvalidRetryCount   = errors.New("invalid retry_count")
+	ErrInvalidCommitType   = errors.New("invalid commit type")
+	ErrMissingCommitType   = errors.New("missing required field 'type'")
+	ErrMissingCommitDesc   = errors.New("missing required field 'description'")
 
 	ErrNoResponse        = errors.New("no response from GPT")
 	ErrFailedToParseJSON = errors.New("failed to parse JSON response")
@@ -20,66 +27,28 @@ var (
 	ErrNoGitChanges        = errors.New("no changes to commit")
 	ErrNoGitCommits        = errors.New("no commits found")
 	ErrCommitMessageEmpty  = errors.New("commit message cannot be empty")
-
-	ErrWrongInput = errors.New("wrong input, please enter 'y', 'e' or 'n'")
-
-	ErrFailedToCreateFile = errors.New("failed to create file")
-	ErrFailedToWriteFile  = errors.New("failed to write to file")
-	ErrFailedToReadFile   = errors.New("failed to read file")
-	ErrFailedToRunEditor  = errors.New("error running editor")
+	ErrUnknownCommand      = errors.New("unknown command")
 )
 
 var (
+	As  = errors.As
 	New = errors.New
 )
 
-func HandleDiffError(err error) {
+// Format returns a formatted error message
+func Format(err error) string {
 	switch {
 	case errors.Is(err, ErrNoGitChanges):
-		fmt.Println("⚠️ No changes to commit")
-	default:
-		fmt.Printf("❌ Error getting git diff: %s\n", err)
-	}
-}
-
-func HandleGitLogError(err error) {
-	switch {
-	case errors.Is(err, ErrNoGitChanges):
-		fmt.Println("⚠️ No changes found in the git log")
-	default:
-		fmt.Printf("❌ Error getting git log: %s\n", err)
-	}
-}
-
-func HandleModelError(err error) {
-	switch {
+		return "⚠️ no changes to commit"
 	case errors.Is(err, ErrNoResponse):
-		fmt.Println("⚠️ No response from GPT")
+		return "⚠️ no response from GPT"
 	case errors.Is(err, ErrFailedToParseJSON):
-		fmt.Println("⚠️ Failed to parse JSON response")
-	default:
-		fmt.Printf("❌ Error getting model response: %s\n", err)
-	}
-}
-
-func HandleInputError(err error) {
-	switch {
-	case errors.Is(err, ErrWrongInput):
-		fmt.Println("⚠️ Invalid input, please enter 'y', 'e' or 'n'")
-	default:
-		fmt.Printf("❌ Error reading user input: %s\n", err)
-	}
-}
-
-func HandleCommitError(err error) {
-	switch {
+		return "⚠️ failed to parse JSON response"
 	case errors.Is(err, ErrCommitMessageEmpty):
-		fmt.Println("⚠️ Commit message is empty, commit aborted")
+		return "⚠️ commit message is empty, commit aborted"
+	case errors.Is(err, ErrUnknownCommand):
+		return "⚠️ unknown command. Use 'cmt --help' for usage"
 	default:
-		fmt.Printf("❌ Error committing changes: %s\n", err)
+		return fmt.Sprintf("❌ %s", err.Error())
 	}
-}
-
-func HandleEditError(err error) {
-	fmt.Printf("❌ Error editing commit message: %s\n", err)
 }

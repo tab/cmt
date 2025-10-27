@@ -70,21 +70,6 @@ func (mr *MockClientMockRecorder) Diff(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Diff", reflect.TypeOf((*MockClient)(nil).Diff), ctx)
 }
 
-// Edit mocks base method.
-func (m *MockClient) Edit(ctx context.Context, message string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Edit", ctx, message)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Edit indicates an expected call of Edit.
-func (mr *MockClientMockRecorder) Edit(ctx, message any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Edit", reflect.TypeOf((*MockClient)(nil).Edit), ctx, message)
-}
-
 // Log mocks base method.
 func (m *MockClient) Log(ctx context.Context, opts []string) (string, error) {
 	m.ctrl.T.Helper()
@@ -98,4 +83,19 @@ func (m *MockClient) Log(ctx context.Context, opts []string) (string, error) {
 func (mr *MockClientMockRecorder) Log(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Log", reflect.TypeOf((*MockClient)(nil).Log), ctx, opts)
+}
+
+// Status mocks base method.
+func (m *MockClient) Status(ctx context.Context) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Status", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Status indicates an expected call of Status.
+func (mr *MockClientMockRecorder) Status(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockClient)(nil).Status), ctx)
 }

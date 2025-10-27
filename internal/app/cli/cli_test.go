@@ -1,367 +1,104 @@
 package cli
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"os"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"cmt/internal/app/commands"
-	"cmt/internal/config"
-	"cmt/internal/config/logger"
+	"cmt/internal/app/cli/commands"
 )
 
-func Test_NewCli(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockCommit := commands.NewMockCommit(ctrl)
-	mockChangelog := commands.NewMockChangelog(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-
-	commandLineInterface := NewCLI(mockCommit, mockChangelog, mockLogger)
-	assert.NotNil(t, commandLineInterface)
-
-	instance, ok := commandLineInterface.(*cli)
-	assert.True(t, ok)
-	assert.NotNil(t, instance)
+func Test_Module(t *testing.T) {
+	assert.NotNil(t, Module)
 }
 
-func Test_Run(t *testing.T) {
+func Test_NewCLI(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockCommit := commands.NewMockCommit(ctrl)
-	mockChangelog := commands.NewMockChangelog(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
+	mockRunner := NewMockRunner(ctrl)
+	cli := NewCLI(mockRunner)
+	assert.NotNil(t, cli)
+	assert.NotNil(t, cli.runner)
+}
 
-	commandLineInterface := NewCLI(mockCommit, mockChangelog, mockLogger)
+func Test_CLI_Run(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRunner := NewMockRunner(ctrl)
+	mockCmd := commands.NewMockCommand(ctrl)
 
 	tests := []struct {
-		name   string
-		args   []string
-		before func()
-		output string
+		name           string
+		args           []string
+		before         func(*MockRunner, *commands.MockCommand)
+		expectedReturn int
 	}{
 		{
-			name: "Success",
+			name: "Success without args",
 			args: []string{},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockCommit.EXPECT().Generate(gomock.Any(), []string{}).Return(nil)
+			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
+				mockRunner.EXPECT().Resolve([]string{}).Return(mockCmd, []string{}, nil)
+				mockCmd.EXPECT().Run(gomock.Any(), []string{}).Return(0)
 			},
-			output: "",
+			expectedReturn: 0,
 		},
 		{
-			name: "With -p flag",
-			args: []string{"-p", "TASK-1234"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockCommit.EXPECT().Generate(gomock.Any(), []string{"TASK-1234"}).Return(nil)
-			},
-			output: "",
-		},
-		{
-			name: "With --prefix flag",
-			args: []string{"--prefix", "TASK-1234"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockCommit.EXPECT().Generate(gomock.Any(), []string{"TASK-1234"}).Return(nil)
-			},
-			output: "",
-		},
-		{
-			name: "With prefix command",
-			args: []string{"prefix", "TASK-1234"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockCommit.EXPECT().Generate(gomock.Any(), []string{"TASK-1234"}).Return(nil)
-			},
-			output: "",
-		},
-		{
-			name: "With changelog command",
-			args: []string{"changelog"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockChangelog.EXPECT().Generate(gomock.Any(), []string{}).Return(nil)
-			},
-			output: "",
-		},
-		{
-			name: "With changelog command and range",
-			args: []string{"changelog", "v1.0.0..v1.1.0"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockChangelog.EXPECT().Generate(gomock.Any(), []string{"v1.0.0..v1.1.0"}).Return(nil)
-			},
-			output: "",
-		},
-		{
-			name: "With changelog command and commit range",
-			args: []string{"changelog", "2606b09..5e3ac73"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
-				mockChangelog.EXPECT().Generate(gomock.Any(), []string{"2606b09..5e3ac73"}).Return(nil)
-			},
-			output: "",
-		},
-		{
-			name: "With help command",
+			name: "Success with help command",
 			args: []string{"help"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
+			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
+				mockRunner.EXPECT().Resolve([]string{"help"}).Return(mockCmd, []string{}, nil)
+				mockCmd.EXPECT().Run(gomock.Any(), []string{}).Return(0)
 			},
-			output: fmt.Sprintf("%s\n", Usage),
+			expectedReturn: 0,
 		},
 		{
-			name: "With version command",
+			name: "Success with version command",
 			args: []string{"version"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
+			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
+				mockRunner.EXPECT().Resolve([]string{"version"}).Return(mockCmd, []string{}, nil)
+				mockCmd.EXPECT().Run(gomock.Any(), []string{}).Return(0)
 			},
-			output: fmt.Sprintf("Version: %s\n", config.Version),
+			expectedReturn: 0,
 		},
 		{
-			name: "With unknown command",
+			name: "Success with changelog command",
+			args: []string{"changelog sha1..sha2"},
+			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
+				mockRunner.EXPECT().Resolve([]string{"changelog sha1..sha2"}).Return(mockCmd, []string{}, nil)
+				mockCmd.EXPECT().Run(gomock.Any(), []string{}).Return(0)
+			},
+			expectedReturn: 0,
+		},
+		{
+			name: "Failure with help command error",
+			args: []string{"help"},
+			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
+				mockRunner.EXPECT().Resolve([]string{"help"}).Return(mockCmd, []string{}, nil)
+				mockCmd.EXPECT().Run(gomock.Any(), []string{}).Return(1)
+			},
+			expectedReturn: 1,
+		},
+		{
+			name: "Failure with unknown command",
 			args: []string{"unknown"},
-			before: func() {
-				mockLogger.EXPECT().Debug().AnyTimes()
+			before: func(mockRunner *MockRunner, mockCmd *commands.MockCommand) {
+				mockRunner.EXPECT().Resolve([]string{"unknown"}).Return(nil, nil, assert.AnError)
 			},
-			output: "Unknown command. Use 'cmt help' for more information\n",
+			expectedReturn: 1,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.before()
+			tt.before(mockRunner, mockCmd)
 
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			defer func() {
-				w.Close()
-				os.Stdout = oldStdout
-
-				var buf bytes.Buffer
-				_, _ = io.Copy(&buf, r)
-				output := buf.String()
-				assert.Equal(t, tt.output, output)
-
-				if rec := recover(); rec == nil {
-					t.Fatal("expected os.Exit(0) panic, but none occurred")
-				}
-			}()
-
-			_ = commandLineInterface.Run(tt.args)
+			cli := NewCLI(mockRunner)
+			result := cli.Run(context.Background(), tt.args)
+			assert.Equal(t, tt.expectedReturn, result)
 		})
 	}
-}
-
-func Test_HandleHelp(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockLogger.EXPECT().Debug().AnyTimes()
-
-	commandLineInterface := &cli{
-		log: mockLogger,
-	}
-
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	defer func() {
-		os.Stdout = oldStdout
-	}()
-
-	commandLineInterface.handleHelp()
-
-	w.Close()
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
-	output := buf.String()
-
-	assert.Equal(t, fmt.Sprintf("%s\n", Usage), output)
-}
-
-func Test_HandleVersion(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockLogger.EXPECT().Debug().AnyTimes()
-
-	commandLineInterface := &cli{
-		log: mockLogger,
-	}
-
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	defer func() {
-		os.Stdout = oldStdout
-	}()
-
-	commandLineInterface.handleVersion()
-
-	w.Close()
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
-	output := buf.String()
-
-	assert.Equal(t, fmt.Sprintf("Version: %s\n", config.Version), output)
-}
-
-func Test_HandleCommit(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockCommit := commands.NewMockCommit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockLogger.EXPECT().Debug().AnyTimes()
-
-	commandLineInterface := &cli{
-		commit: mockCommit,
-		log:    mockLogger,
-	}
-
-	tests := []struct {
-		name   string
-		params []string
-		before func()
-	}{
-		{
-			name:   "No params",
-			params: []string{},
-			before: func() {
-				mockCommit.EXPECT().Generate(gomock.Any(), []string{}).Return(nil)
-			},
-		},
-		{
-			name:   "With prefix",
-			params: []string{"TASK-1234"},
-			before: func() {
-				mockCommit.EXPECT().Generate(gomock.Any(), []string{"TASK-1234"}).Return(nil)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.before()
-
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			defer func() {
-				os.Stdout = oldStdout
-			}()
-
-			commandLineInterface.handleCommit(tt.params)
-
-			w.Close()
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, r)
-			output := buf.String()
-
-			assert.Equal(t, "", output)
-		})
-	}
-}
-
-func Test_HandleChangelog(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockChangelog := commands.NewMockChangelog(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockLogger.EXPECT().Debug().AnyTimes()
-
-	commandLineInterface := &cli{
-		changelog: mockChangelog,
-		log:       mockLogger,
-	}
-
-	tests := []struct {
-		name   string
-		params []string
-		before func()
-	}{
-		{
-			name:   "No params",
-			params: []string{},
-			before: func() {
-				mockChangelog.EXPECT().Generate(gomock.Any(), []string{}).Return(nil)
-			},
-		},
-		{
-			name:   "With range",
-			params: []string{"v1.0.0..v1.1.0"},
-			before: func() {
-				mockChangelog.EXPECT().Generate(gomock.Any(), []string{"v1.0.0..v1.1.0"}).Return(nil)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.before()
-
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			defer func() {
-				os.Stdout = oldStdout
-			}()
-
-			commandLineInterface.handleChangelog(tt.params)
-
-			w.Close()
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, r)
-			output := buf.String()
-
-			assert.Equal(t, "", output)
-		})
-	}
-}
-
-func Test_HandleUnknown(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockLogger.EXPECT().Debug().AnyTimes()
-
-	commandLineInterface := &cli{
-		log: mockLogger,
-	}
-
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	defer func() {
-		os.Stdout = oldStdout
-	}()
-
-	commandLineInterface.handleUnknown()
-
-	w.Close()
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
-	output := buf.String()
-
-	assert.Equal(t, "Unknown command. Use 'cmt help' for more information\n", output)
 }

@@ -5,8 +5,5 @@ import (
 )
 
 var Module = fx.Options(
-	fx.Provide(
-		NewHTTPClient,
-		NewGPTClient,
-	),
+	fx.Provide(NewGPTClient),
 )

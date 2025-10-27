@@ -2,10 +2,24 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// writeTempConfig creates a temporary directory with a cmt.yaml file
+// containing the specified contents and returns the directory path.
+func writeTempConfig(t *testing.T, contents string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "cmt.yaml")
+	err := os.WriteFile(configPath, []byte(contents), 0644)
+	if err != nil {
+		t.Fatalf("failed to write temp config: %v", err)
+	}
+	return tmpDir
+}
 
 func Test_DefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
@@ -16,54 +30,53 @@ func Test_DefaultConfig(t *testing.T) {
 	assert.Equal(t, DefaultRetryCount, cfg.API.RetryCount)
 	assert.Equal(t, DefaultTimeout, cfg.API.Timeout)
 	assert.Equal(t, DefaultLogLevel, cfg.Logging.Level)
-	assert.Equal(t, DefaultLogFormat, cfg.Logging.Format)
-	assert.Equal(t, DefaultEditor, cfg.Editor)
 }
 
 func Test_Load(t *testing.T) {
-	tests := []struct {
-		name          string
-		configFile    string
-		configContent string
-		token         string
-		error         bool
-		expected      *Config
-	}{
-		{
-			name:     "Default config",
-			token:    "test-token",
-			error:    false,
-			expected: DefaultConfig(),
-		},
-		{
-			name:  "Missing api token",
-			token: "",
-			error: true,
-		},
-	}
+	t.Setenv("OPENAI_API_KEY", "test-token")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oldToken := os.Getenv("OPENAI_API_KEY")
-			defer os.Setenv("OPENAI_API_KEY", oldToken)
+	cfg, err := Load()
 
-			os.Setenv("OPENAI_API_KEY", tt.token)
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.NotEmpty(t, cfg.Model.Name)
+	assert.Greater(t, cfg.Model.MaxTokens, 0)
+	assert.GreaterOrEqual(t, cfg.API.RetryCount, 0)
+	assert.NotEmpty(t, cfg.Logging.Level)
+}
 
-			cfg, err := Load()
+func Test_Load_WithInvalidConfig(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-token")
 
-			if tt.error {
-				assert.Error(t, err)
-				assert.Nil(t, cfg)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, cfg)
-				assert.Equal(t, tt.expected.Model.Name, cfg.Model.Name)
-				assert.Equal(t, tt.expected.Model.MaxTokens, cfg.Model.MaxTokens)
-				assert.Equal(t, tt.expected.API.RetryCount, cfg.API.RetryCount)
-				assert.Equal(t, tt.expected.Logging.Level, cfg.Logging.Level)
-			}
-		})
-	}
+	configContent := `model:
+  temperature: 3.0`
+
+	tmpDir := writeTempConfig(t, configContent)
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
+
+	cfg, err := Load()
+
+	assert.Error(t, err)
+	assert.Nil(t, cfg)
+}
+
+func Test_Load_WithBadYAML(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-token")
+
+	configContent := `model:
+  name: [invalid yaml structure`
+
+	tmpDir := writeTempConfig(t, configContent)
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
+
+	cfg, err := Load()
+
+	assert.Error(t, err)
+	assert.Nil(t, cfg)
 }
 
 func Test_GetAPIToken(t *testing.T) {
@@ -78,7 +91,7 @@ func Test_GetAPIToken(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  "Error",
+			name:  "Failure with missing token",
 			env:   "",
 			error: true,
 		},
@@ -86,10 +99,7 @@ func Test_GetAPIToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oldEnv := os.Getenv("OPENAI_API_KEY")
-			defer os.Setenv("OPENAI_API_KEY", oldEnv)
-
-			os.Setenv("OPENAI_API_KEY", tt.env)
+			t.Setenv("OPENAI_API_KEY", tt.env)
 
 			token, err := GetAPIToken()
 			if tt.error {
@@ -98,6 +108,132 @@ func Test_GetAPIToken(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.env, token)
+			}
+		})
+	}
+}
+
+func Test_Validate(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupConfig func() *Config
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "Success",
+			setupConfig: DefaultConfig,
+			expectError: false,
+		},
+		{
+			name: "Success with temperature at lower bound",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.Model.Temperature = 0
+				return cfg
+			},
+			expectError: false,
+		},
+		{
+			name: "Success with temperature at upper bound",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.Model.Temperature = 2
+				return cfg
+			},
+			expectError: false,
+		},
+		{
+			name: "Success with zero retry count",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.API.RetryCount = 0
+				return cfg
+			},
+			expectError: false,
+		},
+		{
+			name: "Failure with negative temperature",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.Model.Temperature = -0.1
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid temperature",
+		},
+		{
+			name: "Failure with high temperature",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.Model.Temperature = 2.1
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid temperature",
+		},
+		{
+			name: "Failure with zero max tokens",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.Model.MaxTokens = 0
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid max_tokens",
+		},
+		{
+			name: "Failure with negative max tokens",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.Model.MaxTokens = -100
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid max_tokens",
+		},
+		{
+			name: "Failure with zero timeout",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.API.Timeout = 0
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid timeout",
+		},
+		{
+			name: "Failure with negative timeout",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.API.Timeout = -1
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid timeout",
+		},
+		{
+			name: "Failure with negative retry count",
+			setupConfig: func() *Config {
+				cfg := DefaultConfig()
+				cfg.API.RetryCount = -1
+				return cfg
+			},
+			expectError: true,
+			errorMsg:    "invalid retry_count",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			err := cfg.validate()
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

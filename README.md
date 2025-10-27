@@ -6,18 +6,18 @@ It automates the process of writing clear and structured commit messages, enhanc
 
 ## Features
 
-- **Automated Commit Messages**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification.
-- **Interactive Approval**: Allows you to review and approve the generated commit message before committing.
-- **Interactive Edit**: Supports editing the commit message interactively before committing.
-- **Custom Prefixes**: Supports adding custom prefixes to commit messages for better traceability (e.g., task IDs, issue numbers).
-- **Changelog Generation**: Automatically creates changelogs based on your commit history.
-- **Integration with OpenAI GPT**: Utilizes GPT to analyze your staged changes and produce meaningful commit messages.
+- **Commit Message Generation**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification using GPT.
+- **Changelog Generation**: Generates changelogs based on your commit history and outputs to console.
+- **Interactive TUI**: Modern terminal user interface with split-panel view showing file tree and commit message for review and editing.
+- **Editor**: Built-in editor for commit message editing.
+- **Custom Prefixes**: Supports adding custom prefixes to commit messages (e.g., task IDs, issue numbers).
+- **Logging**: Built-in TUI log viewer with ring buffer for debugging and troubleshooting.
 
 ## Prerequisites
 
 Before installing and using **cmt**, ensure you have the following:
 
-- **Go**: Version 1.16 or higher is recommended.
+- **Go**: Version 1.24 or higher is recommended.
 - **Git**: Ensure Git is installed and initialized in your project.
 - **OpenAI API Key**: Obtain an API key from [OpenAI](https://platform.openai.com/account/api-keys) to use GPT models.
 
@@ -70,14 +70,12 @@ _For permanent setup, add the above line to your shell profile (`~/.bashrc`, `~/
 
 ## Configuration
 
-**cmt** can be configured using a YAML configuration file named `cmt.yaml` placed in the current directory. Below is an example configuration file with the default settings:
+Create a `cmt.yaml` file in the current directory:
 
 ```yaml
 api:
   retry_count: 3  # Number of retry attempts for API requests
   timeout: 60s    # Timeout duration for API requests
-
-editor: vim       # Editor to use for interactive editing
 
 model:
   name: gpt-4.1-nano # OpenAI model to use
@@ -85,12 +83,8 @@ model:
   temperature: 0.7   # Controls randomness of the model output
 
 logging:
-  format: console    # Logging format (console or json)
   level: info        # Logging level (debug, info, warn, error)
 ```
-
-You can customize any of these settings to fit your preferences.
-If no configuration file is found, **cmt** will use these default values.
 
 ## Usage
 
@@ -106,58 +100,63 @@ Run the `cmt` command to generate a commit message:
 cmt
 ```
 
-Review the generated commit message and choose whether to commit or not.
+Review the generated commit message in an interactive split-panel TUI:
 
-```sh
-💬 Message: feat(core): Add user authentication
+- **Left Panel**: File tree showing staged files (scrollable)
+- **Right Panel**: Generated commit message (scrollable)
+- **Focus Indicator**: The focused pane has a blue border
 
-Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
+**Key Bindings:**
+- `Tab` - Switch focus between panes
+- `j`/`k` or `↑`/`↓` - Scroll focused pane
+- `a` - Accept and commit
+- `e` - Edit message (opens vim-style modal editor)
+- `r` - Refresh (regenerate from GPT)
+- `l` - Toggle application logs
+- `q` or `Ctrl+C` - Quit without committing
 
-Accept, edit, or cancel? (y/e/n):
-```
-
-Type **y** to accept and commit the changes, **e** to edit message or **n** to abort.
+If you accept (`a`), the changes will be committed:
 
 ```sh
 🚀 Changes committed:
 [feature/jwt 29ca12d] feat(core): Add user authentication
  2 files changed, 106 insertions(+), 68 deletions(-)
- ...
 ```
 
-### Optional Prefix
+### Custom Prefix
 
-Optional prefix for the commit message can be set with the `--prefix` flag:
+Add a custom prefix to your commit message (e.g., issue tracker ID):
 
 ```sh
-cmt --prefix "TASK-1234"
+cmt --prefix "JIRA-123"
+# or
+cmt prefix "JIRA-123"
+# or
+cmt -p "JIRA-123"
 ```
 
-Resulting commit message:
+The prefix will be prepended to the generated commit message:
 
-```sh
-💬 Message: TASK-1234 feat(core): Add user authentication
-
-Implemented JWT-based authentication for API endpoints. Users can now log in and receive a token for subsequent requests.
-
-Accept, edit, or cancel? (y/e/n):
+```
+JIRA-123 feat(core): Add user authentication
 ```
 
-### Changelog generation
+### Changelog Generation
 
-Run the `cmt changelog` to generate a changelog based on your commit history:
+Generate a changelog from your commit history and output directly to console:
 
 ```sh
-cmt changelog SHA1..SHA2
+cmt changelog                 # From first commit to HEAD
+cmt changelog v1.0.0..v1.1.0  # Between version tags
+cmt changelog SHA1..SHA2      # Between specific commits
+cmt changelog SHA..HEAD       # From commit to HEAD
 ```
 
-```sh
-cmt changelog v1.0.0..v1.1.0
-```
+The changelog is generated using GPT and output in Markdown format:
 
-The command will output the changelog in the following format:
+Example output:
 
-```sh
+```markdown
 # CHANGELOG
 
 ## [1.1.0]
@@ -170,8 +169,27 @@ The command will output the changelog in the following format:
 ### Bug Fixes
 
 - **fix(auth):** Resolve token expiration issue
+```
 
-...
+### Log Viewer
+
+The TUI includes a built-in log viewer for debugging and troubleshooting.
+
+**Accessing Logs:**
+
+Press `l` repeatedly to cycle through views:
+1. **Commit Message** (default) - Shows the generated commit message
+2. **Diff View** - Shows the staged changes (git diff)
+3. **Application Logs** - Shows structured application logs with timestamps and context
+
+**Log Levels:**
+
+Set the log level to control verbosity:
+
+```sh
+# config file (cmt.yaml)
+logging:
+  level: debug
 ```
 
 ## FAQ
