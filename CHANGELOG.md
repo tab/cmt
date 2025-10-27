@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [v0.7.0](https://github.com/tab/cmt/releases/tag/v0.7.0)
+
+### Features
+- **feat:** Add TUI using Bubble Tea
+- **feat:** Add in-memory log buffer
+
+### Refactor
+- **refactor:** Update GPT client with retry logic and exponential backoff
+
+### Dependencies
+- **chore:** Bump dependencies (go.uber.org/mock, spf13/viper)
+- **chore:** Update workflow actions (goreleaser, staticcheck, checkout, setup-go, codecov)
+
+### Documentation
+- **docs:** Update the README
+
 ## [v0.6.0](https://github.com/tab/cmt/releases/tag/v0.6.0)
 
 ### Features
