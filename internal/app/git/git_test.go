@@ -147,6 +147,7 @@ func Test_Diff(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func Test_Log(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -234,6 +235,7 @@ func Test_Log(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func Test_Status(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
