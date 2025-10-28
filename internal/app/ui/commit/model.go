@@ -238,7 +238,11 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Edit):
 		if m.stateMachine.CanEdit() {
 			m.stateMachine.EnterEditing()
-			m.textarea.SetValue(m.state.CommitMessage)
+			fullMessage := m.state.CommitMessage
+			if m.state.Prefix != "" {
+				fullMessage = m.state.Prefix + " " + fullMessage
+			}
+			m.textarea.SetValue(fullMessage)
 			m.textarea.Focus()
 			return m, textarea.Blink
 		}
@@ -301,7 +305,11 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleEditMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
-		m.state.CommitMessage = m.textarea.Value()
+		editedText := m.textarea.Value()
+		prefix, message := m.parsePrefix(editedText)
+		m.state.Prefix = prefix
+		m.state.CommitMessage = message
+
 		pane := m.stateMachine.ViewPane()
 		if pane == AppLogsPane {
 			pane = m.stateMachine.LastViewPane()
@@ -385,4 +393,19 @@ func (m Model) renderAppLogs() string {
 	}
 
 	return sb.String()
+}
+
+// parsePrefix extracts a prefix from the edited text
+func (m Model) parsePrefix(text string) (prefix, message string) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", ""
+	}
+
+	if m.state.Prefix != "" && strings.HasPrefix(text, m.state.Prefix+" ") {
+		message = strings.TrimSpace(text[len(m.state.Prefix):])
+		return m.state.Prefix, message
+	}
+
+	return "", text
 }

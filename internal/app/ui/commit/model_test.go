@@ -438,6 +438,60 @@ func Test_HandleNormalMode_Edit(t *testing.T) {
 	assert.Equal(t, "test commit", updatedModel.textarea.Value())
 }
 
+func Test_HandleNormalMode_Edit_WithPrefix(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockGit := git.NewMockClient(ctrl)
+	mockGPT := gpt.NewMockClient(ctrl)
+	mockSpinner := spinner.NewMockModel(ctrl)
+	mockLogger := logger.NewMockLogger(ctrl)
+
+	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
+
+	tests := []struct {
+		name          string
+		commitMessage string
+		prefix        string
+		expectedValue string
+	}{
+		{
+			name:          "Edit mode with prefix",
+			commitMessage: "chore(ui): Add login feature",
+			prefix:        "JIRA-123",
+			expectedValue: "JIRA-123 chore(ui): Add login feature",
+		},
+		{
+			name:          "Edit mode without prefix",
+			commitMessage: "chore(ui): Add login feature",
+			prefix:        "",
+			expectedValue: "chore(ui): Add login feature",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := Input{
+				CommitMessage: tt.commitMessage,
+				Prefix:        tt.prefix,
+				GitClient:     mockGit,
+				GPTClient:     mockGPT,
+				Logger:        mockLogger,
+				Ctx:           context.Background(),
+				Spinner:       func() spinner.Model { return mockSpinner },
+			}
+
+			m := NewModel(input)
+			keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+			updated, _ := m.handleNormalMode(keyMsg)
+			updatedModel := updated.(Model)
+
+			assert.Equal(t, Editing, updatedModel.stateMachine.WorkflowMode())
+			assert.Equal(t, tt.expectedValue, updatedModel.textarea.Value())
+		})
+	}
+}
+
 func Test_HandleNormalMode_Regenerate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -657,6 +711,84 @@ func Test_HandleEditMode(t *testing.T) {
 	}
 }
 
+func Test_HandleEditMode_WithPrefix(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockGit := git.NewMockClient(ctrl)
+	mockGPT := gpt.NewMockClient(ctrl)
+	mockSpinner := spinner.NewMockModel(ctrl)
+	mockLogger := logger.NewMockLogger(ctrl)
+
+	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
+
+	tests := []struct {
+		name           string
+		originalPrefix string
+		editedText     string
+		expectedPrefix string
+		expectedMsg    string
+	}{
+		{
+			name:           "Keeps original prefix when present",
+			originalPrefix: "JIRA-123",
+			editedText:     "JIRA-123 chore(ui): Updated commit message",
+			expectedPrefix: "JIRA-123",
+			expectedMsg:    "chore(ui): Updated commit message",
+		},
+		{
+			name:           "Handles removed prefix",
+			originalPrefix: "JIRA-123",
+			editedText:     "chore(ui): Plain commit message",
+			expectedPrefix: "",
+			expectedMsg:    "chore(ui): Plain commit message",
+		},
+		{
+			name:           "Handles no original prefix",
+			originalPrefix: "",
+			editedText:     "chore(ui): Plain commit message",
+			expectedPrefix: "",
+			expectedMsg:    "chore(ui): Plain commit message",
+		},
+		{
+			name:           "Handles changed prefix",
+			originalPrefix: "OLD-123",
+			editedText:     "NEW-456 chore(ui): Changed message",
+			expectedPrefix: "",
+			expectedMsg:    "NEW-456 chore(ui): Changed message",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := Input{
+				CommitMessage: "old message",
+				Prefix:        tt.originalPrefix,
+				GitClient:     mockGit,
+				GPTClient:     mockGPT,
+				Logger:        mockLogger,
+				Ctx:           context.Background(),
+				Spinner:       func() spinner.Model { return mockSpinner },
+			}
+
+			m := NewModel(input)
+			m.width = 120
+			m.height = 40
+			m.ready = true
+			m.stateMachine.EnterEditing()
+			m.textarea.SetValue(tt.editedText)
+
+			keyMsg := tea.KeyMsg{Type: tea.KeyEsc}
+			updated, _ := m.handleEditMode(keyMsg)
+			updatedModel := updated.(Model)
+
+			assert.Equal(t, tt.expectedPrefix, updatedModel.state.Prefix)
+			assert.Equal(t, tt.expectedMsg, updatedModel.state.CommitMessage)
+			assert.Equal(t, Viewing, updatedModel.stateMachine.WorkflowMode())
+		})
+	}
+}
+
 func Test_GetOutput(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -853,6 +985,109 @@ func Test_RenderAppLogs(t *testing.T) {
 			logs := m.renderAppLogs()
 
 			assert.Contains(t, logs, tt.expected)
+		})
+	}
+}
+
+func Test_ParsePrefix(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockGit := git.NewMockClient(ctrl)
+	mockGPT := gpt.NewMockClient(ctrl)
+	mockSpinner := spinner.NewMockModel(ctrl)
+	mockLogger := logger.NewMockLogger(ctrl)
+
+	mockSpinner.EXPECT().Tick().Return(nil).AnyTimes()
+
+	tests := []struct {
+		name           string
+		text           string
+		originalPrefix string
+		expectedPrefix string
+		expectedMsg    string
+	}{
+		{
+			name:           "Original prefix with conventional commit",
+			text:           "JIRA-123 chore(ui): commit message",
+			originalPrefix: "JIRA-123",
+			expectedPrefix: "JIRA-123",
+			expectedMsg:    "chore(ui): commit message",
+		},
+		{
+			name:           "Task prefix with conventional commit",
+			text:           "TASK-12345 feat(auth): add login",
+			originalPrefix: "TASK-12345",
+			expectedPrefix: "TASK-12345",
+			expectedMsg:    "feat(auth): add login",
+		},
+		{
+			name:           "User removed prefix",
+			text:           "chore(ui): commit message",
+			originalPrefix: "JIRA-123",
+			expectedPrefix: "",
+			expectedMsg:    "chore(ui): commit message",
+		},
+		{
+			name:           "User changed prefix",
+			text:           "NEW-123 chore(ui): message",
+			originalPrefix: "OLD-123",
+			expectedPrefix: "",
+			expectedMsg:    "NEW-123 chore(ui): message",
+		},
+		{
+			name:           "No original prefix set",
+			text:           "chore(ui): some message",
+			originalPrefix: "",
+			expectedPrefix: "",
+			expectedMsg:    "chore(ui): some message",
+		},
+		{
+			name:           "Empty text",
+			text:           "",
+			originalPrefix: "",
+			expectedPrefix: "",
+			expectedMsg:    "",
+		},
+		{
+			name:           "Text with whitespace only",
+			text:           "   ",
+			originalPrefix: "",
+			expectedPrefix: "",
+			expectedMsg:    "",
+		},
+		{
+			name:           "Prefix without space",
+			text:           "JIRA-123chore",
+			originalPrefix: "JIRA-123",
+			expectedPrefix: "",
+			expectedMsg:    "JIRA-123chore",
+		},
+		{
+			name:           "Prefix with extra spaces",
+			text:           "JIRA-123  chore(ui): message",
+			originalPrefix: "JIRA-123",
+			expectedPrefix: "JIRA-123",
+			expectedMsg:    "chore(ui): message",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := Input{
+				Prefix:    tt.originalPrefix,
+				GitClient: mockGit,
+				GPTClient: mockGPT,
+				Logger:    mockLogger,
+				Ctx:       context.Background(),
+				Spinner:   func() spinner.Model { return mockSpinner },
+			}
+
+			m := NewModel(input)
+			prefix, message := m.parsePrefix(tt.text)
+
+			assert.Equal(t, tt.expectedPrefix, prefix)
+			assert.Equal(t, tt.expectedMsg, message)
 		})
 	}
 }
