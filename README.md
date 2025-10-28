@@ -4,6 +4,8 @@
 
 It automates the process of writing clear and structured commit messages, enhancing your Git workflow and ensuring consistency across projects.
 
+![screenshot](assets/screenshot.png)
+
 ## Features
 
 - **Commit Message Generation**: Generates commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification using GPT.
