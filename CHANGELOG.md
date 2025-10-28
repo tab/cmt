@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [v0.7.1](https://github.com/tab/cmt/releases/tag/v0.7.1)
+
+### Fixes
+- **fix:** Correct prefix handling during commit message editing
+
 ## [v0.7.0](https://github.com/tab/cmt/releases/tag/v0.7.0)
 
 ### Features

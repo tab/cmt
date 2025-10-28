@@ -21,7 +21,7 @@ const (
 	AppName        = "cmt"
 	AppDescription = "command line utility to generate conversational commits using OpenAI's GPT models"
 
-	Version = "0.7.0"
+	Version = "0.7.1"
 )
 
 // Config represents the application configuration
