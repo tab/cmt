@@ -33,8 +33,14 @@ func Test_Run(t *testing.T) {
 				t.Setenv("OPENAI_API_KEY", "test-api-key")
 				tmpDir := t.TempDir()
 				originalWd, _ := os.Getwd()
-				os.Chdir(tmpDir)
-				return func() { os.Chdir(originalWd) }
+				if err := os.Chdir(tmpDir); err != nil {
+					t.Fatalf("failed to change directory: %v", err)
+				}
+				return func() {
+					if err := os.Chdir(originalWd); err != nil {
+						t.Errorf("failed to restore directory: %v", err)
+					}
+				}
 			},
 			expectedExitCode: 1,
 		},
@@ -47,13 +53,19 @@ func Test_Run(t *testing.T) {
 				originalArgs := os.Args
 
 				configPath := filepath.Join(tmpDir, "cmt.yaml")
-				os.WriteFile(configPath, []byte("gpt:\n  model: gpt-4\n"), 0644)
+				if err := os.WriteFile(configPath, []byte("gpt:\n  model: gpt-4\n"), 0600); err != nil {
+					t.Fatalf("failed to write config: %v", err)
+				}
 
-				os.Chdir(tmpDir)
+				if err := os.Chdir(tmpDir); err != nil {
+					t.Fatalf("failed to change directory: %v", err)
+				}
 				os.Args = []string{"cmt", "help"}
 
 				return func() {
-					os.Chdir(originalWd)
+					if err := os.Chdir(originalWd); err != nil {
+						t.Errorf("failed to restore directory: %v", err)
+					}
 					os.Args = originalArgs
 				}
 			},

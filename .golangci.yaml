@@ -1,4 +1,7 @@
+version: "2"
+
 linters:
+  default: none
   enable:
     - bodyclose
     - copyloopvar
@@ -7,28 +10,12 @@ linters:
     - gocritic
     - gocyclo
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - misspell
     - nakedret
     - prealloc
-    # - revive
     - staticcheck
-    - stylecheck
-    - typecheck
     - unconvert
     - unparam
     - unused
-  fast: false
-  disable-all: true
-
-issues:
-  exclude-dirs:
-    - docs
-    - vendor
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - dupl

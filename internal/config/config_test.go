@@ -14,7 +14,7 @@ func writeTempConfig(t *testing.T, contents string) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "cmt.yaml")
-	err := os.WriteFile(configPath, []byte(contents), 0644)
+	err := os.WriteFile(configPath, []byte(contents), 0600)
 	if err != nil {
 		t.Fatalf("failed to write temp config: %v", err)
 	}
@@ -53,8 +53,14 @@ func Test_Load_WithInvalidConfig(t *testing.T) {
 
 	tmpDir := writeTempConfig(t, configContent)
 	originalWd, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(originalWd)
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to change directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalWd); err != nil {
+			t.Errorf("failed to restore directory: %v", err)
+		}
+	}()
 
 	cfg, err := Load()
 
@@ -70,8 +76,14 @@ func Test_Load_WithBadYAML(t *testing.T) {
 
 	tmpDir := writeTempConfig(t, configContent)
 	originalWd, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(originalWd)
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to change directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalWd); err != nil {
+			t.Errorf("failed to restore directory: %v", err)
+		}
+	}()
 
 	cfg, err := Load()
 
